@@ -73,6 +73,7 @@ struct NodeColor{
 	int total;
 	pcl::PointCloud<pcl::PointXYZRGB> cloud;
 	NodeColor *next;
+	NodeColor *prev;
 };
 
 class ImageConverter3D {
@@ -118,25 +119,34 @@ public:
 			//if the point is in the H range, it is added to the resulting point cloud. On the other hand, paint it black (to be displayed later)
 			if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= SLORANGE) && (hsv.s <= SUORANGE)) && ((hsv.v >= VLORANGE) && (hsv.v <= VUORANGE))){
 				PCxyzrgbout.push_back(*it);
-				addNode(objetos[ORANGE], it, PCxyzrgb);
+				addNode(ORANGE, it, PCxyzrgb);
 			}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= SLRED) && (hsv.s <= SURED)) && ((hsv.v >= VLRED) && (hsv.v <= VURED))){
 				PCxyzrgbout.push_back(*it);
-				addNode(objetos[RED], it, PCxyzrgb);
+				addNode(RED, it, PCxyzrgb);
 			}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE)) && ((hsv.s >= SLBLUE) && (hsv.s <= SUBLUE)) && ((hsv.v >= VLBLUE) && (hsv.v <= VUBLUE))){
 				PCxyzrgbout.push_back(*it);
-				addNode(objetos[BLUE], it, PCxyzrgb);
+				addNode(BLUE, it, PCxyzrgb);
 			}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW)) && ((hsv.s >= SLYELLOW) && (hsv.s <= SUYELLOW)) && ((hsv.v >= VLYELLOW) && (hsv.v <= VUYELLOW))){
 				PCxyzrgbout.push_back(*it);
-				addNode(objetos[YELLOW], it, PCxyzrgb);
+				addNode(YELLOW, it, PCxyzrgb);
 			}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK)) && ((hsv.s >= SLPINK) && (hsv.s <= SUPINK)) && ((hsv.v >= VLPINK) && (hsv.v <= VUPINK))){
 				PCxyzrgbout.push_back(*it);
-				addNode(objetos[PINK], it, PCxyzrgb);
+				addNode(PINK, it, PCxyzrgb);
 			}else {
 				it->r = 0;
 				it->g = 0;
 				it->b = 0;
 			}
 		}
+
+		//Filtrado de objetos
+		for(int i = 0; i < NUM_COLORS; i++){
+			filtrarObjetos(i);
+		}
+
+		//Percepcion de Objetos
+		
+			//Pendiente
 
 		//tansform PCxyzrgb (pcl::PointCloud<pcl::PointXYZRGB>) to Image to display in the OpenCV window
 		pcl::toROSMsg(PCxyzrgb, out);
@@ -167,6 +177,7 @@ public:
 		return sqrt(x*x + y*y + z*z);
 	}
 
+	//Crea un nodo nuevo
 	NodeColor* newNode(pcl::PointCloud<pcl::PointXYZRGB>::iterator it, pcl::PointCloud<pcl::PointXYZRGB> PCxyzrgb){
 		NodeColor *auxnode = NULL;
 		if((auxnode = (NodeColor*)malloc(sizeof(NodeColor*))) != NULL){
@@ -182,17 +193,18 @@ public:
 		return auxnode;
 	}
 	
-
-	void addNode(NodeColor *list, pcl::PointCloud<pcl::PointXYZRGB>::iterator it, pcl::PointCloud<pcl::PointXYZRGB> PCxyzrgb){
+	//Añade un nodo nuevo si el pixel no pertenece a ningun nodo de los que se encuentren en la lista
+	void addNode(int color, pcl::PointCloud<pcl::PointXYZRGB>::iterator it, pcl::PointCloud<pcl::PointXYZRGB> PCxyzrgb){
 		NodeColor *auxnode = NULL;
+		NodeColor *auxnode2 = NULL;
 		float distancia = 0.0;
 		float x, y, z;
 		x = y = z = 0.0;
 
-		if(list = NULL){
-			auxnode = newNode(it, PCxyzrgb);				 
+		if( objetos[color] = NULL){
+			objetos[color] = newNode(it, PCxyzrgb);				 
 		}else{
-			auxnode = list;
+			auxnode = objetos[color];
 			for(;;){
 				distancia = calcDistanciaEuclidea(auxnode, it->x, it->y, it->z);
 				if(distancia <= 1000.0){
@@ -208,10 +220,47 @@ public:
 				}
 				if(auxnode->next == NULL){
 					auxnode->next = newNode(it, PCxyzrgb);
+					auxnode2 = auxnode->next;
+					auxnode2->prev = auxnode;
 					break;	
 				}
 			}
 		}
+	}
+
+	//Elimina el nodo de la lista
+	NodeColor* removeNode(int color, NodeColor *node){
+		NodeColor *auxnode = NULL;
+		if(node->prev == NULL){
+			objetos[color] = node->next;
+			free(node);
+			return objetos[color];
+		}
+		
+		auxnode = node->prev;
+		auxnode->next = node->next;
+		auxnode = node->next;
+		if(auxnode != NULL)
+			auxnode->prev = node->prev;
+		free(node);
+		return auxnode;
+			
+	}
+
+	//Filtrado los objetos, para eliminar los objetos que no cumplen los requisitos
+	void filtrarObjetos(int color){
+		NodeColor *node = objetos[color];
+		while(node != NULL){
+			if(node->total < 22){ 				//Ajustar valor
+				node = removeNode(color, node);
+			}else if(node->cy < 1.0){			//Ajustar valor
+				node = removeNode(color, node);
+			}else if(node->cz < 2.0){			//Ajustar valor
+				node = removeNode(color, node);
+			}else{
+				node = node->next;
+			}	
+		}	
 	}
 };
 
@@ -221,3 +270,31 @@ int main(int argc, char** argv) {
 	ros::spin();
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
