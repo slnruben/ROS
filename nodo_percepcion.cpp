@@ -167,6 +167,7 @@ public:
 		sensor_msgs::PointCloud2 pcout;
 		pcl::toROSMsg(PCxyzrgbout, pcout);
 		image_pub_.publish(pcout);
+		freeObjetos();
 
 	}
 
@@ -234,6 +235,7 @@ public:
 		if(node->prev == NULL){
 			objetos[color] = node->next;
 			free(node);
+			objetos[color]->prev = NULL;
 			return objetos[color];
 		}
 		
@@ -261,6 +263,16 @@ public:
 				node = node->next;
 			}	
 		}	
+	}
+
+	void freeObjetos(){
+		NodeColor *node;
+		for(int i = 0; i < NUM_COLORS; i++){
+			node = objetos[i];
+			while(node != NULL){
+				node = removeNode(i, node);
+			}
+		}
 	}
 };
 
