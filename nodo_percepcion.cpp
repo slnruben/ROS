@@ -26,44 +26,7 @@
 #include <pcl/impl/point_types.hpp>
 #include <pcl/point_types_conversion.h>
 
-enum{ORANGE, RED, BLUE, YELLOW, PINK, NUM_COLORS};
-
-enum{
-	HUORANGE = 255,
-	HLORANGE = 0,
-	SUORANGE = 255,
-	SLORANGE = 0,
-	VUORANGE = 255,
-	VLORANGE = 0,
-
-	HURED = 255,
-	HLRED = 0,
-	SURED = 255,
-	SLRED = 0,
-	VURED = 255,
-	VLRED = 0,
-
-	HUBLUE = 255,
-	HLBLUE = 0,
-	SUBLUE = 255,
-	SLBLUE = 0,
-	VUBLUE = 255,
-	VLBLUE = 0,
-
-	HUYELLOW = 255,
-	HLYELLOW = 0,
-	SUYELLOW = 255,
-	SLYELLOW = 0,
-	VUYELLOW = 255,
-	VLYELLOW = 0,
-
-	HUPINK = 255,
-	HLPINK = 0,
-	SUPINK = 255,
-	SLPINK = 0,
-	VUPINK = 255,
-	VLPINK = 0,
-};
+enum{ORANGE, BIGORANGE, RED, BLUE, YELLOW, PINK, NUM_COLORS};
 
 typedef struct NodeColor NodeColor;
 struct NodeColor{
@@ -98,6 +61,29 @@ public:
 		cv::destroyWindow("Imagen filtrada");
 	}
 
+
+	static const int HUORANGE = 360; //ImageConverter3D::HURANGE
+	static const int HLORANGE = 336;
+	static const int SUORANGE = 360;
+	static const int SLORANGE = 276;
+
+	static const int HUBIGORANGE = 35;
+	static const int HLBIGORANGE = 0;
+
+	static const int HURED = 360;
+	static const int HLRED = 336;
+	static const int SURED = 275;
+	static const int SLRED = 180;
+
+	static const int HUBLUE = 265;
+	static const int HLBLUE = 150;
+
+	static const int HUYELLOW = 149;
+	static const int HLYELLOW = 36;
+	
+	static const int HUPINK = 335;
+	static const int HLPINK = 266;
+
 	void imageCb(const sensor_msgs::PointCloud2ConstPtr& msg) {
 		pcl::PointCloud<pcl::PointXYZRGB> PCxyzrgb, PCxyzrgbout;
 		sensor_msgs::PointCloud2 out;
@@ -117,19 +103,22 @@ public:
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
 
 			//if the point is in the H range, it is added to the resulting point cloud. On the other hand, paint it black (to be displayed later)
-			if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= SLORANGE) && (hsv.s <= SUORANGE)) && ((hsv.v >= VLORANGE) && (hsv.v <= VUORANGE))){
+			if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360)))){
 				PCxyzrgbout.push_back(*it);
 				addNode(ORANGE, it, PCxyzrgb);
-			}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= SLRED) && (hsv.s <= SURED)) && ((hsv.v >= VLRED) && (hsv.v <= VURED))){
+			}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
 				PCxyzrgbout.push_back(*it);
 				addNode(RED, it, PCxyzrgb);
-			}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE)) && ((hsv.s >= SLBLUE) && (hsv.s <= SUBLUE)) && ((hsv.v >= VLBLUE) && (hsv.v <= VUBLUE))){
+			}else if(((hsv.h >= HLBIGORANGE) && (hsv.h <= BIGORANGE))){
+				PCxyzrgbout.push_back(*it);
+				addNode(BIGORANGE, it, PCxyzrgb);
+			}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE))){
 				PCxyzrgbout.push_back(*it);
 				addNode(BLUE, it, PCxyzrgb);
-			}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW)) && ((hsv.s >= SLYELLOW) && (hsv.s <= SUYELLOW)) && ((hsv.v >= VLYELLOW) && (hsv.v <= VUYELLOW))){
+			}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW))){
 				PCxyzrgbout.push_back(*it);
 				addNode(YELLOW, it, PCxyzrgb);
-			}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK)) && ((hsv.s >= SLPINK) && (hsv.s <= SUPINK)) && ((hsv.v >= VLPINK) && (hsv.v <= VUPINK))){
+			}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK))){
 				PCxyzrgbout.push_back(*it);
 				addNode(PINK, it, PCxyzrgb);
 			}else {
@@ -138,11 +127,12 @@ public:
 				it->b = 0;
 			}
 		}
+		
 
 		//Filtrado de objetos
-		for(int i = 0; i < NUM_COLORS; i++){
-			filtrarObjetos(i);
-		}
+		//for(int i = 0; i < NUM_COLORS; i++){
+		//	filtrarObjetos(i);
+		//}
 
 		//Percepcion de Objetos
 		
@@ -156,6 +146,14 @@ public:
 		pcl::toROSMsg(out, image);
 		cv_imageout = cv_bridge::toCvCopy(image,
 				sensor_msgs::image_encodings::BGR8);
+
+		for (int i = 0; i < NUM_COLORS; i++){
+			NodeColor *auxnode = objetos[i];
+			while(auxnode != NULL){
+				cv::rectangle(cv_imageout->image, cv::Point(auxnode->cx-10, auxnode->cy-10), cv::Point(auxnode->cx+10, auxnode->cy+10), cv::Scalar(0, 0, 255), 1, 8);
+				auxnode = auxnode->next;
+			}
+		}
 
 		cv::imshow("Imagen filtrada", cv_imageout->image);
 		cv::waitKey(3);
@@ -225,6 +223,7 @@ public:
 					auxnode2->prev = auxnode;
 					break;	
 				}
+				auxnode = auxnode->next;
 			}
 		}
 	}
