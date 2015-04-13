@@ -29,6 +29,7 @@
 enum{ORANGE, BIGORANGE, RED, BLUE, YELLOW, PINK, NUM_COLORS};
 
 typedef struct NodeColor NodeColor;
+typedef struct ListObjetos ListObjetos;
 struct NodeColor{
 	float cx;
 	float cy;
@@ -38,13 +39,16 @@ struct NodeColor{
 	NodeColor *next;
 	NodeColor *prev;
 };
+struct ListObjetos{
+	Nodecolor list;
+}
 
 class ImageConverter3D {
 	ros::NodeHandle nh_;
 	ros::Subscriber image_sub_;
 	ros::Publisher image_pub_;
 	
-	NodeColor *objetos[NUM_COLORS];
+	ListObjetos objetos[NUM_COLORS];
 
 public:
 	ImageConverter3D() {
@@ -169,6 +173,12 @@ public:
 
 	}
 
+	void initList(){
+		for(int i = 0; i < NUM_COLORS; i++){
+			objetos[i].list = NULL;
+		}
+	}
+
 	float calcDistanciaEuclidea(NodeColor *node, float px, float py, float pz){
 		float x = (px - node->cx);
 		float y = (py - node->cy);
@@ -179,7 +189,7 @@ public:
 	//Crea un nodo nuevo
 	NodeColor* newNode(pcl::PointCloud<pcl::PointXYZRGB>::iterator it, pcl::PointCloud<pcl::PointXYZRGB> PCxyzrgb){
 		NodeColor *auxnode = NULL;
-		if((auxnode = (NodeColor*)malloc(sizeof(NodeColor*))) != NULL){
+		if((auxnode = new NodeColor) != NULL){
 				auxnode->cx = it->x;
 				auxnode->cy = it->y;
 				auxnode->cz = it->z;
@@ -233,7 +243,7 @@ public:
 		NodeColor *auxnode = NULL;
 		if(node->prev == NULL){
 			objetos[color] = node->next;
-			free(node);
+			delete node;
 			objetos[color]->prev = NULL;
 			return objetos[color];
 		}
@@ -243,7 +253,7 @@ public:
 		auxnode = node->next;
 		if(auxnode != NULL)
 			auxnode->prev = node->prev;
-		free(node);
+		delete node;
 		return auxnode;
 			
 	}
