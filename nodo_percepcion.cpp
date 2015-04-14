@@ -152,7 +152,7 @@ public:
 				sensor_msgs::image_encodings::BGR8);
 
 		for (int i = 0; i < NUM_COLORS; i++){
-			NodeColor *auxnode = objetos[i];
+			NodeColor *auxnode = objetos[i].list;
 			while(auxnode != NULL){
 				cv::rectangle(cv_imageout->image, cv::Point(auxnode->cx-10, auxnode->cy-10), cv::Point(auxnode->cx+10, auxnode->cy+10), cv::Scalar(0, 0, 255), 1, 8);
 				auxnode = auxnode->next;
@@ -210,10 +210,10 @@ public:
 		float x, y, z;
 		x = y = z = 0.0;
 
-		if( objetos[color] = NULL){
-			objetos[color] = newNode(it, PCxyzrgb);				 
+		if( objetos[color].list = NULL){
+			objetos[color].list = newNode(it, PCxyzrgb);				 
 		}else{
-			auxnode = objetos[color];
+			auxnode = objetos[color].list;
 			for(;;){
 				distancia = calcDistanciaEuclidea(auxnode, it->x, it->y, it->z);
 				if(distancia <= 1000.0){
@@ -242,10 +242,10 @@ public:
 	NodeColor* removeNode(int color, NodeColor *node){
 		NodeColor *auxnode = NULL;
 		if(node->prev == NULL){
-			objetos[color] = node->next;
+			objetos[color].list = node->next;
 			delete node;
-			objetos[color]->prev = NULL;
-			return objetos[color];
+			objetos[color].list->prev = NULL;
+			return objetos[color].list;
 		}
 		
 		auxnode = node->prev;
@@ -260,7 +260,7 @@ public:
 
 	//Filtrado los objetos, para eliminar los objetos que no cumplen los requisitos
 	void filtrarObjetos(int color){
-		NodeColor *node = objetos[color];
+		NodeColor *node = objetos[color].list;
 		while(node != NULL){
 			if(node->total < 22){ 				//Ajustar valor
 				node = removeNode(color, node);
@@ -274,10 +274,10 @@ public:
 		}	
 	}
 
-	void freeObjetos(){
+	void free[c(){
 		NodeColor *node;
 		for(int i = 0; i < NUM_COLORS; i++){
-			node = objetos[i];
+			node = objetos[i].list;
 			while(node != NULL){
 				node = removeNode(i, node);
 			}
