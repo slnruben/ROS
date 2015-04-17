@@ -22,8 +22,7 @@ struct NodeColor{
 	float cx;
 	float cy;
 	float cz;
-	int total;
-	pcl::PointCloud<pcl::PointXYZRGB> cloud;
+	float total;
 	NodeColor *next;
 	NodeColor *prev;
 };
@@ -61,6 +60,9 @@ class ImageConverter3D {
 	int HUPINK;
 	int HLPINK;
 
+	int distpix;
+	int sizemin;	
+
 public:
 	ImageConverter3D() {
 		//std::string topic = nh_.resolveName("point_cloud");
@@ -69,26 +71,28 @@ public:
 				&ImageConverter3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
 		HUORANGE = 360; //ImageConverter3D::HURANGE
-		HLORANGE = 336;
-		SUORANGE = 360;
-		SLORANGE = 276;
+		HLORANGE = 360; //336;
+		SUORANGE = 360; //360;
+		SLORANGE = 360; //276;
 	
-		HUBIGORANGE = 35;
-		HLBIGORANGE = 0;
+		HUBIGORANGE = 360; //35;
+		HLBIGORANGE = 360; //0;
 	
-		HURED = 360;
-		HLRED = 336;
-		SURED = 275;
-		SLRED = 180;
+		HURED = 360; //360;
+		HLRED = 360; //336;
+		SURED = 360; //275;
+		SLRED = 360; //180;
 	
 		HUBLUE = 360; //265;
 		HLBLUE = 360; //150;
 	
-		HUYELLOW = 149;
-		HLYELLOW = 36;
+		HUYELLOW = 360; //149;
+		HLYELLOW = 360; //36;
 		
-		HUPINK = 335;
-		HLPINK = 266;
+		HUPINK = 360; //335;
+		HLPINK = 360; //266;
+		distpix = 10;
+		sizemin = 20;
 
 		cvNamedWindow("Imagen filtrada");
 		cvNamedWindow("Filtrador Pelotas");
@@ -116,6 +120,9 @@ public:
 		cvCreateTrackbar("Hue Upper YELLOW", "Filtrador Balizas", &HUYELLOW, 360, NULL);
 		cvCreateTrackbar("Hue Lower YELLOW", "Filtrador Balizas", &HLYELLOW, 360, NULL);
 
+		cvCreateTrackbar("Distacia pixeles", "Filtrador Balizas", &distpix, 100, NULL);
+		cvCreateTrackbar("Tamaño minimo", "Filtrador Balizas", &sizemin, 100, NULL);
+
 	}
 
 	~ImageConverter3D() {
@@ -139,33 +146,41 @@ public:
 		for (it = PCxyzrgb.begin(); it != PCxyzrgb.end(); ++it) {
 			pcl::PointXYZHSV hsv;
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
+			//ROS_INFO("%f %f %f", it->x, it->y, it->z);
+			
 			//if the point is in the H range, it is added to the resulting point cloud. On the other hand, paint it black (to be displayed later)
-			if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360)))){
-				//ROS_INFO("Filtra Naranja");
-				addNode(ORANGE, it->x, it->y, it->z);
-				PCxyzrgbout.push_back(*it);
-			}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
-				//ROS_INFO("Filtra Rojo");
-				addNode(RED, it->x, it->y, it->z);
-				PCxyzrgbout.push_back(*it);				
-			}else if(((hsv.h >= HLBIGORANGE) && (hsv.h <= BIGORANGE))){
-				//ROS_INFO("Filtra Naranja claro");
-				addNode(BIGORANGE, it->x, it->y, it->z);
-				PCxyzrgbout.push_back(*it);
-			}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE))){
-				//ROS_INFO("Filtra Azul");
-				addNode(BLUE, it->x, it->y, it->z);
-				PCxyzrgbout.push_back(*it);
-			}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW))){
-				//	ROS_INFO("Filtra amarillo");
-				addNode(YELLOW, it->x, it->y, it->z);
-				PCxyzrgbout.push_back(*it);
-			}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK))){
-				//ROS_INFO("Filtra rosa");
-				addNode(PINK, it->x, it->y, it->z);
-				PCxyzrgbout.push_back(*it);
+			if(it->x == it->x){
+				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360)))){
+					//ROS_INFO("Filtra Naranja");
+					PCxyzrgbout.push_back(*it);
+					addNode(ORANGE, it->x, it->y, it->z);
+				}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
+					//ROS_INFO("Filtra Rojo");
+					PCxyzrgbout.push_back(*it);
+					addNode(RED, it->x, it->y, it->z);				
+				}else if(((hsv.h >= HLBIGORANGE) && (hsv.h <= BIGORANGE))){
+					//ROS_INFO("Filtra Naranja claro");
+					PCxyzrgbout.push_back(*it);
+					addNode(BIGORANGE, it->x, it->y, it->z);
+				}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE))){
+					//ROS_INFO("Filtra Azul");
+					PCxyzrgbout.push_back(*it);
+					addNode(BLUE, it->x, it->y, it->z);
+				}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW))){
+					//	ROS_INFO("Filtra amarillo");
+					PCxyzrgbout.push_back(*it);
+					addNode(YELLOW, it->x, it->y, it->z);
+				}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK))){
+					//ROS_INFO("Filtra rosa");
+					PCxyzrgbout.push_back(*it);
+					addNode(PINK, it->x, it->y, it->z);
+				}else{
+					//ROS_INFO("No filtrado***********************************************************************");
+					it->r = 0;
+					it->g = 0;
+					it->b = 0;
+				}
 			}else{
-				//ROS_INFO("No filtrado***********************************************************************");
 				it->r = 0;
 				it->g = 0;
 				it->b = 0;
@@ -173,7 +188,7 @@ public:
 		}
 		//Filtrado de objetos
 		//for(int i = 0; i < NUM_COLORS; i++){
-		//	filtrarObjetos(i);
+		filtrarObjetos();
 		//}
 
 		//Percepcion de Objetos
@@ -192,7 +207,9 @@ public:
 		for (int i = 0; i < NUM_COLORS; i++){
 			NodeColor *auxnode = objetos[i].list;
 			while(auxnode != NULL){
-				ROS_INFO("CX: %f  CY: %f  CZ: %f SIZE: %d", auxnode->cx, auxnode->cy, auxnode->cz, auxnode->total);
+				auxnode->cy = (auxnode->cy / 0.00625) + 240;
+				auxnode->cx = (auxnode->cx / 0.0055) + 320;
+				ROS_INFO("COLOR: %d  CX: %f  CY: %f  CZ: %f SIZE: %f",i, auxnode->cx, auxnode->cy, auxnode->cz, auxnode->total);
 				cv::rectangle(cv_imageout->image, cv::Point(auxnode->cx-10, auxnode->cy-10), cv::Point(auxnode->cx+10, auxnode->cy+10), cv::Scalar(0, 0, 255), 1, 8);
 				auxnode = auxnode->next;
 			}
@@ -224,7 +241,7 @@ public:
 			node->cx = x;
 			node->cy = y;
 			node->cz = z;
-			node->total = 1;
+			node->total = 1.0;
 			node->next = NULL;
 			node->prev = NULL;
 		}
@@ -238,16 +255,17 @@ public:
 
 			NodeColor *node = objetos[color].list;
 			while(node != NULL){
-				if(compPixel(node)){
+				if(compPixel(node, x, y, z)){
 					float xaux, yaux, zaux;
 					xaux = yaux = zaux = 0.0;
-					xaux = (node->cx * (float)node->total) + x;
-					yaux = (node->cy * (float)node->total) + y;
-					zaux = (node->cz * (float)node->total) + z;
-					node->total++;
-					node->cx = xaux / (float)node->total;
-					node->cy = yaux / (float)node->total;
-					node->cz = zaux / (float)node->total;
+					xaux = (node->cx * node->total) + x;
+					yaux = (node->cy * node->total) + y;
+					zaux = (node->cz * node->total) + z;
+					node->total = node->total + 1.0;
+					node->cx = xaux / node->total;
+					node->cy = yaux / node->total;
+					node->cz = zaux / node->total;
+					//ROS_INFO("x: %f - %f, Y: %f -%f, z: %f - %f, size: %f", x,node->cx, y,node->cy, z, node->cz, node->total);
 					break;
 				}
 				node = node->next;
@@ -261,11 +279,39 @@ public:
 		}
 	}
 
-	int compPixel(NodeColor *node){
-		if(true){
+	int compPixel(NodeColor *node, float x, float y, float z){
+		float px = (x - node->cx);
+		float py = (y - node->cy);
+		float pz = (z - node->cz);
+		float total = sqrt(px*px+py*py+pz*pz);
+		if(total < (float)distpix/100.0){
 			return 1;
 		}
 		return 0;
+	}
+
+	void filtrarObjetos(){
+		
+		for(int i=0; i<NUM_COLORS; i++){
+			NodeColor *node = objetos[i].list;
+			NodeColor *aux = NULL;
+			while(node != NULL){
+				if(node->total < (float)sizemin){
+					if(node == objetos[i].list)
+						objetos[i].list = node->next;
+					aux = node->prev;
+					node = removeNode(node);
+					if(aux != NULL)
+						aux->next = node;
+					if(node != NULL)
+						node->prev = aux;
+					 
+				}else{
+					//ROS_INFO("X: %d,  Y: %d \n", node->cx, node->cy);
+					node = node->next;			
+				}
+			}
+		}
 	}
 
 	NodeColor* removeNode(NodeColor* node){
