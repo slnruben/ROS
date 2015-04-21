@@ -61,6 +61,7 @@ private:
 	ros::Subscriber image_sub_;
 	ros::Publisher image_pub_;
 	tf::TransformListener tf_listener; 
+	tf::TransformBroadcaster tfB;
 	
 	ListColores objetos[NUM_COLORS];
 
@@ -106,7 +107,8 @@ public:
 	void addArray(NodeColor *node, int i);
 	void reconnaissance();
 	void searchBaliza(NodeColor *top, NodeColor *bot, int i);
-	void searchPorteria(NodeColor *node, int pos);
+	void searchOther(NodeColor *node, int pos);
+	void publishObjects();
 };
 
 #endif

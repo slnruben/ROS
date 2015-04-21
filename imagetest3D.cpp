@@ -1,7 +1,6 @@
 #include "imagetest3D.h"
 
 	Imagetest3D::Imagetest3D() {
-		//std::string topic = nh_.resolveName("point_cloud");
 		image_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(
 				//"/camera/depth_registered/points", 1,
 				"/camera/depth/points", 1,
@@ -31,8 +30,8 @@
 		distpix = 10;
 		sizemin = 20;
 
-		maxrange = 1.0;
-		minrange = -1.0;
+		maxrange = 0.1;
+		minrange = -0.1;
 
 		cvNamedWindow("Imagen filtrada");
 		cvNamedWindow("Filtrador Pelotas");
@@ -78,9 +77,6 @@
 		sensor_msgs::PointCloud2 out;
 		sensor_msgs::PointCloud2 pcl_bf;
  		pcl_ros::transformPointCloud("/base_footprint", *msg, pcl_bf, tf_listener); 
-
-		//PointCloud2 -> pcl::PointCloud<pcl::PointXYZRGB>
-		//pcl::fromROSMsg(*msg, PCxyzrgb);
 		pcl::fromROSMsg(pcl_bf, PCxyzrgb);
 
 		//Copy original point cloud to the resulting one.
@@ -90,6 +86,8 @@
 		PCxyzrgbout.clear();
 		initColores();
 		pcl::PointCloud<pcl::PointXYZRGB>::iterator it;
+
+		int i = 0;
 		for (it = PCxyzrgb.begin(); it != PCxyzrgb.end(); ++it) {
 			pcl::PointXYZHSV hsv;
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
@@ -132,58 +130,11 @@
 				it->b = 0;
 			}
 		}
-		//Filtrado de objetos
-		//for(int i = 0; i < NUM_COLORS; i++){
 		filtrarObjetos();
-
-		//}
-
-		//Percepcion de Objetos
+		reconnaissance();
+		publishObjects();
 		
-			//Pendiente
-
-		//tansform PCxyzrgb (pcl::PointCloud<pcl::PointXYZRGB>) to Image to display in the OpenCV window
-		//pcl::toROSMsg(PCxyzrgb, out);
-		//sensor_msgs::Image image;
-		//cv_bridge::CvImagePtr cv_imageout;
-
-		//pcl::toROSMsg(out, image);
-		//cv_imageout = cv_bridge::toCvCopy(image,
-		//		sensor_msgs::image_encodings::BGR8);
-				//sensor_msgs::image_encodings::RGB8);
-		//for (int i = 0; i < NUM_COLORS; i++){
-		tf::TransformBroadcaster tfB;
-			NodeColor *auxnode = objetos[3].list;
-			while(auxnode != NULL){
-				tf::StampedTransform RB;
-
-				RB.frame_id_ = "/base_link";
-				RB.child_frame_id_ = "/ball_1";
-				RB.stamp_ = ros::Time::now() + ros::Duration(0.5);
-
-				RB.setOrigin(tf::Vector3(auxnode->cx, auxnode->cy, auxnode->cz));
-				RB.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-				auxnode = auxnode->next;
-			
-				try
-				{
-				ROS_INFO("PUBLICA");
-				tfB.sendTransform(RB);
-
-				}catch(tf::TransformException & ex){
-					ROS_WARN("%s",ex.what());
-				}
-			}
-		//}*/
-		
-
-		//cv::imshow("Imagen filtrada", cv_imageout->image);
 		cv::waitKey(3);
-
-		//std::cout << "Center of the point cloud filtered = (" << x << ", " << y
-		//		<< ", " << z << ") [" << c << "]" << std::endl;
-
-		//tranform PCxyzrgbout (pcl::PointCloud<pcl::PointXYZRGB>) to PointCloud2 in order to be published
 		sensor_msgs::PointCloud2 pcout;
 		pcl::toROSMsg(PCxyzrgbout, pcout);
 		image_pub_.publish(pcout);
@@ -227,7 +178,6 @@
 					node->cx = xaux / node->total;
 					node->cy = yaux / node->total;
 					node->cz = zaux / node->total;
-					//ROS_INFO("x: %f - %f, Y: %f -%f, z: %f - %f, size: %f", x,node->cx, y,node->cy, z, node->cz, node->total);
 					break;
 				}
 				node = node->next;
@@ -260,7 +210,6 @@
 				if(node->total < (float)sizemin){
 					node = removeNode(node, i);
 				}else{
-					//ROS_INFO("X: %d,  Y: %d \n", node->cx, node->cy);
 					node = node->next;			
 				}
 			}
@@ -297,16 +246,11 @@
 
 	void Imagetest3D::initObjetos() {
 		for(int i = 0; i <= NUM_OBJECTS; i++) {
-			//array[i].name = std::to_string(i);
+			char buffer[1];
+			sprintf(buffer, "%d", i);
+			std::string name(buffer);
+			array[i].name = name;
 			array[i].boolean = 0;
-
-				/*int a = 5;
-	char t[255];
-
-	sprintf(t, "%d", a);
-
-	std::string ms(t);
-*/
 		}
 	}
 
@@ -318,27 +262,36 @@
 	}
 
 	void Imagetest3D::reconnaissance() {
+		initObjetos();
+
 		searchBaliza(objetos[PINK].list, objetos[BLUE].list, 0);
 		searchBaliza(objetos[YELLOW].list, objetos[PINK].list, 1);
 		searchBaliza(objetos[YELLOW].list, objetos[BLUE].list, 2);
 		searchBaliza(objetos[BLUE].list, objetos[PINK].list, 3);
-		searchPorteria(objetos[YELLOW].list, 4);
-		searchPorteria(objetos[BLUE].list, 5);
+		searchOther(objetos[YELLOW].list, 4);
+		searchOther(objetos[BLUE].list, 5);
+		searchOther(objetos[ORANGE].list, 6);
+		searchOther(objetos[BIGORANGE].list, 7);
+		searchOther(objetos[RED].list, 8);
 	}
 
 	void Imagetest3D::searchBaliza(NodeColor *top, NodeColor *bot, int i) {
 		NodeColor *nodeTop = top;
 		NodeColor *nodeBot = bot;
 		int found = 0;
+		float errormarginX;
 		float errormarginY;
-		float errormarginZ;
+
+		if(nodeTop->cz < nodeBot->cz) {
+			return;
+		}
 
 		while(nodeTop != NULL) {
 			while(nodeBot != NULL) {
+				errormarginX = nodeTop->cx - nodeBot->cx;
 				errormarginY = nodeTop->cy - nodeBot->cy;
-				errormarginZ = nodeTop->cz - nodeBot->cz;
-				if(errormarginY <= maxrange &&  errormarginY >= minrange &&
-					errormarginZ <= maxrange && errormarginZ >= minrange) {
+				if(errormarginX <= maxrange &&  errormarginX >= minrange &&
+					errormarginY <= maxrange && errormarginY >= minrange) {
 					found = 1;
 					addArray(nodeTop, i);
 					break;
@@ -352,11 +305,12 @@
 				break;
 			}else{
 				nodeTop = nodeTop->next;
+				nodeBot = bot;
 			}
 		}
 	}
 
-	void Imagetest3D::searchPorteria(NodeColor *node, int pos) {
+	void Imagetest3D::searchOther(NodeColor *node, int pos) {
 		int max;
 		for(int i = 1; i < 3; i++) {
 		 	NodeColor *aux = NULL;
@@ -369,6 +323,28 @@
 				node = node->next;
 			}
 			addArray(aux, pos);
+		}
+	}
+
+	void Imagetest3D::publishObjects() {
+		for(int i = 0; i < NUM_OBJECTS; i++) {
+			if(array[i].boolean) {
+				tf::StampedTransform RB;
+
+				RB.frame_id_ = "/base_footprint";
+				RB.child_frame_id_ = array[i].name;
+				RB.stamp_ = ros::Time::now() + ros::Duration(0.5);
+
+				RB.setOrigin(tf::Vector3(array[i].cx, array[i].cy, array[i].cz));
+				RB.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+					
+				try{
+					ROS_INFO("PUBLICA");
+					tfB.sendTransform(RB);
+				}catch(tf::TransformException & ex){
+					ROS_WARN("%s",ex.what());
+				}
+			}
 		}
 	}
 
