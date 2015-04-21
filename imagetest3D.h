@@ -15,6 +15,15 @@
 #include <pcl/impl/point_types.hpp>
 #include <pcl/point_types_conversion.h>
 #include <string>
+#include "tf/transform_listener.h"
+#include "pcl_ros/point_cloud.h"
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl/io/io.h>
+#include <pcl/point_types.h>
+#include "pcl_ros/transforms.h"
+#include "pcl_ros/impl/transforms.hpp"
+#include "tf/transform_listener.h"
+#include "tf/transform_broadcaster.h"
 
 class Imagetest3D {
 private:
@@ -51,6 +60,7 @@ private:
 	ros::NodeHandle nh_;
 	ros::Subscriber image_sub_;
 	ros::Publisher image_pub_;
+	tf::TransformListener tf_listener; 
 	
 	ListColores objetos[NUM_COLORS];
 
@@ -90,7 +100,7 @@ public:
 	void addNode(int color, float x, float y, float z);
 	int compPixel(NodeColor *node, float x, float y, float z);
 	void filtrarObjetos();
-	NodeColor* removeNode(NodeColor* node);
+	NodeColor* removeNode(NodeColor* node, int color);
 	void freeList();
 	void initObjetos();
 	void addArray(NodeColor *node, int i);

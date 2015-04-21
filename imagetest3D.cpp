@@ -3,7 +3,8 @@
 	Imagetest3D::Imagetest3D() {
 		//std::string topic = nh_.resolveName("point_cloud");
 		image_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(
-				"/camera/depth_registered/points", 1,
+				//"/camera/depth_registered/points", 1,
+				"/camera/depth/points", 1,
 				&Imagetest3D::Imagetest3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
 		HUORANGE = 360; //ImageConverter3D::HURANGE
@@ -66,26 +67,32 @@
 
 	Imagetest3D::~Imagetest3D() {
 		cv::destroyWindow("Imagen filtrada");
+		cv::destroyWindow("Filtrador Balizas");
+		cv::destroyWindow("Filtrador Pelotas");
 	}
 
 	void Imagetest3D::imageCb(const sensor_msgs::PointCloud2ConstPtr& msg) {
 		pcl::PointCloud<pcl::PointXYZRGB> PCxyzrgb, PCxyzrgbout;
+
+				
 		sensor_msgs::PointCloud2 out;
+		sensor_msgs::PointCloud2 pcl_bf;
+ 		pcl_ros::transformPointCloud("/base_footprint", *msg, pcl_bf, tf_listener); 
 
 		//PointCloud2 -> pcl::PointCloud<pcl::PointXYZRGB>
-		pcl::fromROSMsg(*msg, PCxyzrgb);
+		//pcl::fromROSMsg(*msg, PCxyzrgb);
+		pcl::fromROSMsg(pcl_bf, PCxyzrgb);
 
 		//Copy original point cloud to the resulting one.
 		//The points in the resulting point cloud are removed completely.
 		//The points of this resulting point cloud will be added later, depending on the H filtering process.
 		PCxyzrgbout = PCxyzrgb;
 		PCxyzrgbout.clear();
-		initObjetos();
+		initColores();
 		pcl::PointCloud<pcl::PointXYZRGB>::iterator it;
 		for (it = PCxyzrgb.begin(); it != PCxyzrgb.end(); ++it) {
 			pcl::PointXYZHSV hsv;
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
-			//ROS_INFO("%f %f %f", it->x, it->y, it->z);
 			
 			//if the point is in the H range, it is added to the resulting point cloud. On the other hand, paint it black (to be displayed later)
 			if(it->x == it->x){
@@ -128,6 +135,7 @@
 		//Filtrado de objetos
 		//for(int i = 0; i < NUM_COLORS; i++){
 		filtrarObjetos();
+
 		//}
 
 		//Percepcion de Objetos
@@ -135,26 +143,41 @@
 			//Pendiente
 
 		//tansform PCxyzrgb (pcl::PointCloud<pcl::PointXYZRGB>) to Image to display in the OpenCV window
-		pcl::toROSMsg(PCxyzrgb, out);
-		sensor_msgs::Image image;
-		cv_bridge::CvImagePtr cv_imageout;
+		//pcl::toROSMsg(PCxyzrgb, out);
+		//sensor_msgs::Image image;
+		//cv_bridge::CvImagePtr cv_imageout;
 
-		pcl::toROSMsg(out, image);
-		cv_imageout = cv_bridge::toCvCopy(image,
-				sensor_msgs::image_encodings::BGR8);
-
-		for (int i = 0; i < NUM_COLORS; i++){
-			NodeColor *auxnode = objetos[i].list;
+		//pcl::toROSMsg(out, image);
+		//cv_imageout = cv_bridge::toCvCopy(image,
+		//		sensor_msgs::image_encodings::BGR8);
+				//sensor_msgs::image_encodings::RGB8);
+		//for (int i = 0; i < NUM_COLORS; i++){
+		tf::TransformBroadcaster tfB;
+			NodeColor *auxnode = objetos[3].list;
 			while(auxnode != NULL){
-				auxnode->cy = (auxnode->cy / 0.00625) + 240;
-				auxnode->cx = (auxnode->cx / 0.0055) + 320;
-				ROS_INFO("COLOR: %d  CX: %f  CY: %f  CZ: %f SIZE: %f",i, auxnode->cx, auxnode->cy, auxnode->cz, auxnode->total);
-				cv::rectangle(cv_imageout->image, cv::Point(auxnode->cx-10, auxnode->cy-10), cv::Point(auxnode->cx+10, auxnode->cy+10), cv::Scalar(0, 0, 255), 1, 8);
-				auxnode = auxnode->next;
-			}
-		}
+				tf::StampedTransform RB;
 
-		cv::imshow("Imagen filtrada", cv_imageout->image);
+				RB.frame_id_ = "/base_link";
+				RB.child_frame_id_ = "/ball_1";
+				RB.stamp_ = ros::Time::now() + ros::Duration(0.5);
+
+				RB.setOrigin(tf::Vector3(auxnode->cx, auxnode->cy, auxnode->cz));
+				RB.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+				auxnode = auxnode->next;
+			
+				try
+				{
+				ROS_INFO("PUBLICA");
+				tfB.sendTransform(RB);
+
+				}catch(tf::TransformException & ex){
+					ROS_WARN("%s",ex.what());
+				}
+			}
+		//}*/
+		
+
+		//cv::imshow("Imagen filtrada", cv_imageout->image);
 		cv::waitKey(3);
 
 		//std::cout << "Center of the point cloud filtered = (" << x << ", " << y
@@ -164,6 +187,7 @@
 		sensor_msgs::PointCloud2 pcout;
 		pcl::toROSMsg(PCxyzrgbout, pcout);
 		image_pub_.publish(pcout);
+	
 		freeList();
 	}
 
@@ -229,21 +253,12 @@
 	}
 
 	void Imagetest3D::filtrarObjetos() {
-		
+		NodeColor *node = NULL;
 		for(int i = 0; i < NUM_COLORS; i++){
-			NodeColor *node = objetos[i].list;
-			NodeColor *aux = NULL;
+			node = objetos[i].list;
 			while(node != NULL){
 				if(node->total < (float)sizemin){
-					if(node == objetos[i].list)
-						objetos[i].list = node->next;
-					aux = node->prev;
-					node = removeNode(node);
-					if(aux != NULL)
-						aux->next = node;
-					if(node != NULL)
-						node->prev = aux;
-					 
+					node = removeNode(node, i);
 				}else{
 					//ROS_INFO("X: %d,  Y: %d \n", node->cx, node->cy);
 					node = node->next;			
@@ -252,8 +267,18 @@
 		}
 	}
 
-	Imagetest3D::NodeColor* Imagetest3D::removeNode(NodeColor* node) {
+	Imagetest3D::NodeColor* Imagetest3D::removeNode(NodeColor* node, int color) {
 		NodeColor *aux = node->next;
+
+		if(node == objetos[color].list)
+			objetos[color].list = node->next;
+		aux = node->prev;
+		if(aux != NULL)
+			aux->next = node->next;
+		aux = node->next;
+		if(aux != NULL)
+			aux->prev = node->prev;
+		
 		delete node;
 		return aux;
 	}
@@ -264,7 +289,7 @@
 		for(int i = 0; i < NUM_COLORS; i++){
 			node = objetos[i].list;
 			while(node != NULL){
-				node = removeNode(node);
+				node = removeNode(node, i);
 			}
 			objetos[i].list = node;
 		}
@@ -274,6 +299,14 @@
 		for(int i = 0; i <= NUM_OBJECTS; i++) {
 			//array[i].name = std::to_string(i);
 			array[i].boolean = 0;
+
+				/*int a = 5;
+	char t[255];
+
+	sprintf(t, "%d", a);
+
+	std::string ms(t);
+*/
 		}
 	}
 
@@ -286,9 +319,9 @@
 
 	void Imagetest3D::reconnaissance() {
 		searchBaliza(objetos[PINK].list, objetos[BLUE].list, 0);
-		searchBaliza(objetos[YELLOW].list, objetos[BLUE].list, 1);
-		searchBaliza(objetos[BLUE].list, objetos[PINK].list, 2);
-		searchBaliza(objetos[YELLOW].list, objetos[PINK].list, 3);
+		searchBaliza(objetos[YELLOW].list, objetos[PINK].list, 1);
+		searchBaliza(objetos[YELLOW].list, objetos[BLUE].list, 2);
+		searchBaliza(objetos[BLUE].list, objetos[PINK].list, 3);
 		searchPorteria(objetos[YELLOW].list, 4);
 		searchPorteria(objetos[BLUE].list, 5);
 	}
@@ -314,8 +347,8 @@
 				}
 			}
 			if(found) {
-				//removeNode(nodeTop);
-				//removeNode(nodeBot);
+				removeNode(nodeTop, i);
+				removeNode(nodeBot, i);
 				break;
 			}else{
 				nodeTop = nodeTop->next;
