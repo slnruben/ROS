@@ -62,6 +62,8 @@ private:
 	int HLORANGE;
 	int SUORANGE;
 	int SLORANGE;
+	int VUORANGE;
+	int VLORANGE;
 
 	int HUBIGORANGE;
 	int HLBIGORANGE;

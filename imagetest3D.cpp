@@ -3,13 +3,15 @@
 	Imagetest3D::Imagetest3D() {
 		image_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(
 				//"/camera/depth_registered/points", 1,
-				"/camera/depth/points", 1,
+				"/camera/depth_registered/points", 1,
 				&Imagetest3D::Imagetest3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
 		HUORANGE = 360; //ImageConverter3D::HURANGE
 		HLORANGE = 360; //336;
 		SUORANGE = 360; //360;
 		SLORANGE = 360; //276;
+		VUORANGE = 360;
+		VLORANGE = 360;
 	
 		HUBIGORANGE = 360; //35;
 		HLBIGORANGE = 360; //0;
@@ -41,6 +43,8 @@
 		cvCreateTrackbar("Hue Lower ORANGE", "Filtrador Pelotas", &HLORANGE, 360, NULL);
 		cvCreateTrackbar("Sat Upper ORANGE", "Filtrador Pelotas", &SUORANGE, 360, NULL);
 		cvCreateTrackbar("Sat Lower ORANGE", "Filtrador Pelotas", &SLORANGE, 360, NULL);
+		cvCreateTrackbar("V Upper ORANGE", "Filtrador Pelotas", &VUORANGE, 360, NULL);
+		cvCreateTrackbar("V Lower ORANGE", "Filtrador Pelotas", &VLORANGE, 360, NULL);
 
 		cvCreateTrackbar("Hue Upper RED", "Filtrador Pelotas", &HURED, 360, NULL);
 		cvCreateTrackbar("Hue Lower RED", "Filtrador Pelotas", &HLRED, 360, NULL);
@@ -90,7 +94,8 @@
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
 			
 			if(it->x == it->x){
-				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360)))){
+				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360))) 
+										&& ((hsv.v >= ((float)VLORANGE/360)) && (hsv.v <= ((float)VUORANGE/360)))){
 					PCxyzrgbout.push_back(*it);
 					addNode(ORANGE, it->x, it->y, it->z);
 				}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
@@ -123,6 +128,16 @@
 		reconnaissance();
 		publishObjects();
 		
+		pcl::toROSMsg(PCxyzrgb, out);
+		sensor_msgs::Image image;
+		cv_bridge::CvImagePtr cv_imageout;
+	
+		pcl::toROSMsg(out, image);
+		cv_imageout = cv_bridge::toCvCopy(image,
+			sensor_msgs::image_encodings::BGR8);
+			//sensor_msgs::image_encodings::RGB16);
+
+		cv::imshow("Imagen filtrada", cv_imageout->image);
 		cv::waitKey(3);
 		sensor_msgs::PointCloud2 pcout;
 		pcl::toROSMsg(PCxyzrgbout, pcout);
