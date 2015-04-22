@@ -79,9 +79,6 @@
  		pcl_ros::transformPointCloud("/base_footprint", *msg, pcl_bf, tf_listener); 
 		pcl::fromROSMsg(pcl_bf, PCxyzrgb);
 
-		//Copy original point cloud to the resulting one.
-		//The points in the resulting point cloud are removed completely.
-		//The points of this resulting point cloud will be added later, depending on the H filtering process.
 		PCxyzrgbout = PCxyzrgb;
 		PCxyzrgbout.clear();
 		initColores();
@@ -92,34 +89,26 @@
 			pcl::PointXYZHSV hsv;
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
 			
-			//if the point is in the H range, it is added to the resulting point cloud. On the other hand, paint it black (to be displayed later)
 			if(it->x == it->x){
 				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360)))){
-					//ROS_INFO("Filtra Naranja");
 					PCxyzrgbout.push_back(*it);
 					addNode(ORANGE, it->x, it->y, it->z);
 				}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
-					//ROS_INFO("Filtra Rojo");
 					PCxyzrgbout.push_back(*it);
 					addNode(RED, it->x, it->y, it->z);				
 				}else if(((hsv.h >= HLBIGORANGE) && (hsv.h <= BIGORANGE))){
-					//ROS_INFO("Filtra Naranja claro");
 					PCxyzrgbout.push_back(*it);
 					addNode(BIGORANGE, it->x, it->y, it->z);
 				}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE))){
-					//ROS_INFO("Filtra Azul");
 					PCxyzrgbout.push_back(*it);
 					addNode(BLUE, it->x, it->y, it->z);
 				}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW))){
-					//	ROS_INFO("Filtra amarillo");
 					PCxyzrgbout.push_back(*it);
 					addNode(YELLOW, it->x, it->y, it->z);
 				}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK))){
-					//ROS_INFO("Filtra rosa");
 					PCxyzrgbout.push_back(*it);
 					addNode(PINK, it->x, it->y, it->z);
 				}else{
-					//ROS_INFO("No filtrado***********************************************************************");
 					it->r = 0;
 					it->g = 0;
 					it->b = 0;

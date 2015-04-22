@@ -29,14 +29,11 @@ class Imagetest3D {
 private:
 	enum{ORANGE, BIGORANGE, RED, BLUE, YELLOW, PINK, NUM_COLORS};
 
-	//typedef struct NodeColor NodeColor;
-	//typedef struct ListObjetos ListObjetos;
 	struct NodeColor{
 		float cx;
 		float cy;
 		float cz;
 		float total;
-		//pcl::PointCloud<pcl::PointXYZRGB> cloud;
 		NodeColor *next;
 		NodeColor *prev;
 	};
