@@ -206,7 +206,7 @@
 	}
 
 	Imagetest3D::NodeColor* Imagetest3D::removeNode(NodeColor* node, int color) {
-		NodeColor *aux = node->next;
+		NodeColor *aux = NULL;
 
 		if(node == objetos[color].list)
 			objetos[color].list = node->next;
@@ -252,11 +252,10 @@
 
 	void Imagetest3D::reconnaissance() {
 		initObjetos();
-
-		searchBaliza(objetos[PINK].list, objetos[BLUE].list, 0);
-		searchBaliza(objetos[YELLOW].list, objetos[PINK].list, 1);
-		searchBaliza(objetos[YELLOW].list, objetos[BLUE].list, 2);
-		searchBaliza(objetos[BLUE].list, objetos[PINK].list, 3);
+		searchBaliza(PINK, BLUE, 0);
+		searchBaliza(YELLOW, PINK, 1);
+		searchBaliza(YELLOW, BLUE, 2);
+		searchBaliza(BLUE, PINK, 3);
 		searchOther(objetos[YELLOW].list, 4);
 		searchOther(objetos[BLUE].list, 5);
 		searchOther(objetos[ORANGE].list, 6);
@@ -264,55 +263,61 @@
 		searchOther(objetos[RED].list, 8);
 	}
 
-	void Imagetest3D::searchBaliza(NodeColor *top, NodeColor *bot, int i) {
-		NodeColor *nodeTop = top;
-		NodeColor *nodeBot = bot;
+	void Imagetest3D::searchBaliza(int colortop, int colorbot, int i) {
+		NodeColor *nodeTop = objetos[colortop].list;
+		NodeColor *nodeBot = objetos[colorbot].list;
 		int found = 0;
 		float errormarginX;
 		float errormarginY;
-
-		if(nodeTop->cz < nodeBot->cz) {
+		if(nodeTop == NULL || nodeBot == NULL)
 			return;
-		}
 
 		while(nodeTop != NULL) {
 			while(nodeBot != NULL) {
+
 				errormarginX = nodeTop->cx - nodeBot->cx;
 				errormarginY = nodeTop->cy - nodeBot->cy;
 				if(errormarginX <= maxrange &&  errormarginX >= minrange &&
-					errormarginY <= maxrange && errormarginY >= minrange) {
+					errormarginY <= maxrange && errormarginY >= minrange && nodeTop->cz > nodeBot->cz) {
 					found = 1;
+
 					addArray(nodeTop, i);
+
 					break;
 				}else{
+
 					nodeBot = nodeBot->next;
 				}
+
 			}
 			if(found) {
-				removeNode(nodeTop, i);
-				removeNode(nodeBot, i);
+
+				removeNode(nodeTop, colortop);
+				removeNode(nodeBot, colorbot);
+
 				break;
 			}else{
 				nodeTop = nodeTop->next;
-				nodeBot = bot;
+
+				nodeBot = objetos[colorbot].list;
 			}
 		}
 	}
 
 	void Imagetest3D::searchOther(NodeColor *node, int pos) {
 		int max;
-		for(int i = 1; i < 3; i++) {
-		 	NodeColor *aux = NULL;
-			max = 0;
-			while(node != NULL){
-				if(node->total > max) {
-					aux = node;
-					max = node->total;
-				}
-				node = node->next;
+		NodeColor *aux = NULL;
+		max = 0;
+		while(node != NULL){
+			if(node->total > max) {
+				aux = node;
+				max = node->total;
 			}
-			addArray(aux, pos);
+			node = node->next;
 		}
+		if(aux != NULL)
+			addArray(aux, pos);
+		
 	}
 
 	void Imagetest3D::publishObjects() {
@@ -328,7 +333,6 @@
 				RB.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
 					
 				try{
-					ROS_INFO("PUBLICA");
 					tfB.sendTransform(RB);
 				}catch(tf::TransformException & ex){
 					ROS_WARN("%s",ex.what());
