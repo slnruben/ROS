@@ -15,11 +15,7 @@
 #include <pcl/impl/point_types.hpp>
 #include <pcl/point_types_conversion.h>
 #include <string>
-#include "tf/transform_listener.h"
-#include "pcl_ros/point_cloud.h"
-#include <sensor_msgs/PointCloud2.h>
 #include <pcl/io/io.h>
-#include <pcl/point_types.h>
 #include "pcl_ros/transforms.h"
 #include "pcl_ros/impl/transforms.hpp"
 #include "tf/transform_listener.h"
@@ -66,6 +62,8 @@ private:
 	int HLORANGE;
 	int SUORANGE;
 	int SLORANGE;
+	int VUORANGE;
+	int VLORANGE;
 
 	int HUBIGORANGE;
 	int HLBIGORANGE;
@@ -103,7 +101,7 @@ public:
 	void initObjetos();
 	void addArray(NodeColor *node, int i);
 	void reconnaissance();
-	void searchBaliza(NodeColor *top, NodeColor *bot, int i);
+	void searchBaliza(int colortop, int colorbot, int i);
 	void searchOther(NodeColor *node, int pos);
 	void publishObjects();
 };

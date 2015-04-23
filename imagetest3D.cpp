@@ -3,13 +3,15 @@
 	Imagetest3D::Imagetest3D() {
 		image_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(
 				//"/camera/depth_registered/points", 1,
-				"/camera/depth/points", 1,
+				"/camera/depth_registered/points", 1,
 				&Imagetest3D::Imagetest3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
 		HUORANGE = 360; //ImageConverter3D::HURANGE
 		HLORANGE = 360; //336;
 		SUORANGE = 360; //360;
 		SLORANGE = 360; //276;
+		VUORANGE = 360;
+		VLORANGE = 360;
 	
 		HUBIGORANGE = 360; //35;
 		HLBIGORANGE = 360; //0;
@@ -41,6 +43,8 @@
 		cvCreateTrackbar("Hue Lower ORANGE", "Filtrador Pelotas", &HLORANGE, 360, NULL);
 		cvCreateTrackbar("Sat Upper ORANGE", "Filtrador Pelotas", &SUORANGE, 360, NULL);
 		cvCreateTrackbar("Sat Lower ORANGE", "Filtrador Pelotas", &SLORANGE, 360, NULL);
+		cvCreateTrackbar("V Upper ORANGE", "Filtrador Pelotas", &VUORANGE, 360, NULL);
+		cvCreateTrackbar("V Lower ORANGE", "Filtrador Pelotas", &VLORANGE, 360, NULL);
 
 		cvCreateTrackbar("Hue Upper RED", "Filtrador Pelotas", &HURED, 360, NULL);
 		cvCreateTrackbar("Hue Lower RED", "Filtrador Pelotas", &HLRED, 360, NULL);
@@ -90,7 +94,8 @@
 			pcl::PointXYZRGBtoXYZHSV(*it, hsv);
 			
 			if(it->x == it->x){
-				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360)))){
+				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360))) 
+										&& ((hsv.v >= ((float)VLORANGE/360)) && (hsv.v <= ((float)VUORANGE/360)))){
 					PCxyzrgbout.push_back(*it);
 					addNode(ORANGE, it->x, it->y, it->z);
 				}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
@@ -123,6 +128,16 @@
 		reconnaissance();
 		publishObjects();
 		
+		pcl::toROSMsg(PCxyzrgb, out);
+		sensor_msgs::Image image;
+		cv_bridge::CvImagePtr cv_imageout;
+	
+		pcl::toROSMsg(out, image);
+		cv_imageout = cv_bridge::toCvCopy(image,
+			sensor_msgs::image_encodings::BGR8);
+			//sensor_msgs::image_encodings::RGB16);
+
+		cv::imshow("Imagen filtrada", cv_imageout->image);
 		cv::waitKey(3);
 		sensor_msgs::PointCloud2 pcout;
 		pcl::toROSMsg(PCxyzrgbout, pcout);
@@ -206,7 +221,7 @@
 	}
 
 	Imagetest3D::NodeColor* Imagetest3D::removeNode(NodeColor* node, int color) {
-		NodeColor *aux = node->next;
+		NodeColor *aux = NULL;
 
 		if(node == objetos[color].list)
 			objetos[color].list = node->next;
@@ -252,11 +267,10 @@
 
 	void Imagetest3D::reconnaissance() {
 		initObjetos();
-
-		searchBaliza(objetos[PINK].list, objetos[BLUE].list, 0);
-		searchBaliza(objetos[YELLOW].list, objetos[PINK].list, 1);
-		searchBaliza(objetos[YELLOW].list, objetos[BLUE].list, 2);
-		searchBaliza(objetos[BLUE].list, objetos[PINK].list, 3);
+		searchBaliza(PINK, BLUE, 0);
+		searchBaliza(YELLOW, PINK, 1);
+		searchBaliza(YELLOW, BLUE, 2);
+		searchBaliza(BLUE, PINK, 3);
 		searchOther(objetos[YELLOW].list, 4);
 		searchOther(objetos[BLUE].list, 5);
 		searchOther(objetos[ORANGE].list, 6);
@@ -264,55 +278,61 @@
 		searchOther(objetos[RED].list, 8);
 	}
 
-	void Imagetest3D::searchBaliza(NodeColor *top, NodeColor *bot, int i) {
-		NodeColor *nodeTop = top;
-		NodeColor *nodeBot = bot;
+	void Imagetest3D::searchBaliza(int colortop, int colorbot, int i) {
+		NodeColor *nodeTop = objetos[colortop].list;
+		NodeColor *nodeBot = objetos[colorbot].list;
 		int found = 0;
 		float errormarginX;
 		float errormarginY;
-
-		if(nodeTop->cz < nodeBot->cz) {
+		if(nodeTop == NULL || nodeBot == NULL)
 			return;
-		}
 
 		while(nodeTop != NULL) {
 			while(nodeBot != NULL) {
+
 				errormarginX = nodeTop->cx - nodeBot->cx;
 				errormarginY = nodeTop->cy - nodeBot->cy;
 				if(errormarginX <= maxrange &&  errormarginX >= minrange &&
-					errormarginY <= maxrange && errormarginY >= minrange) {
+					errormarginY <= maxrange && errormarginY >= minrange && nodeTop->cz > nodeBot->cz) {
 					found = 1;
+
 					addArray(nodeTop, i);
+
 					break;
 				}else{
+
 					nodeBot = nodeBot->next;
 				}
+
 			}
 			if(found) {
-				removeNode(nodeTop, i);
-				removeNode(nodeBot, i);
+
+				removeNode(nodeTop, colortop);
+				removeNode(nodeBot, colorbot);
+
 				break;
 			}else{
 				nodeTop = nodeTop->next;
-				nodeBot = bot;
+
+				nodeBot = objetos[colorbot].list;
 			}
 		}
 	}
 
 	void Imagetest3D::searchOther(NodeColor *node, int pos) {
 		int max;
-		for(int i = 1; i < 3; i++) {
-		 	NodeColor *aux = NULL;
-			max = 0;
-			while(node != NULL){
-				if(node->total > max) {
-					aux = node;
-					max = node->total;
-				}
-				node = node->next;
+		NodeColor *aux = NULL;
+		max = 0;
+		while(node != NULL){
+			if(node->total > max) {
+				aux = node;
+				max = node->total;
 			}
-			addArray(aux, pos);
+			node = node->next;
 		}
+		if(aux != NULL)
+			addArray(aux, pos);
+		
 	}
 
 	void Imagetest3D::publishObjects() {
@@ -328,7 +348,6 @@
 				RB.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
 					
 				try{
-					ROS_INFO("PUBLICA");
 					tfB.sendTransform(RB);
 				}catch(tf::TransformException & ex){
 					ROS_WARN("%s",ex.what());
