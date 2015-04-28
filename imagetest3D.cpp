@@ -2,8 +2,8 @@
 
 	Imagetest3D::Imagetest3D() {
 		image_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(
+				"/camera/depth/points", 1,
 				//"/camera/depth_registered/points", 1,
-				"/camera/depth_registered/points", 1,
 				&Imagetest3D::Imagetest3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
 		HUORANGE = 360; //ImageConverter3D::HURANGE
@@ -171,16 +171,16 @@
 		reconnaissance();
 		publishObjects();
 		
-		pcl::toROSMsg(PCxyzrgb, out);
-		sensor_msgs::Image image;
-		cv_bridge::CvImagePtr cv_imageout;
+		//pcl::toROSMsg(PCxyzrgb, out);
+		//sensor_msgs::Image image;
+		//cv_bridge::CvImagePtr cv_imageout;
 	
-		pcl::toROSMsg(out, image);
-		cv_imageout = cv_bridge::toCvCopy(image,
-			sensor_msgs::image_encodings::BGR8);
+		//pcl::toROSMsg(out, image);
+		//cv_imageout = cv_bridge::toCvCopy(image,
+		//	sensor_msgs::image_encodings::BGR8);
 			//sensor_msgs::image_encodings::RGB16);
 
-		cv::imshow("Imagen filtrada", cv_imageout->image);
+		//cv::imshow("Imagen filtrada", cv_imageout->image);
 		cv::waitKey(3);
 		sensor_msgs::PointCloud2 pcout;
 		pcl::toROSMsg(PCxyzrgbout, pcout);
@@ -292,13 +292,23 @@
 	}
 
 	void Imagetest3D::initObjetos() {
-		for(int i = 0; i <= NUM_OBJECTS; i++) {
+ROS_INFO(" ");
+		for(int i = 0; i <= 5; i++) {
 			char buffer[1];
 			sprintf(buffer, "%d", i);
 			std::string name(buffer);
-			array[i].name = name;
+			array[i].name = "perceived_" + name;
 			array[i].boolean = 0;
 		}
+
+		for(int i = 6; i <= 8; i++) {
+			char buffer[1];
+			sprintf(buffer, "%d", i);
+			std::string name(buffer);
+			array[i].name = "pelota_" + name;
+			array[i].boolean = 0;
+		}
+
 	}
 
 	void Imagetest3D::addArray(NodeColor *node, int i) {
