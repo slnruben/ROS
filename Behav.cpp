@@ -153,6 +153,10 @@ normalizePi(double data)
 void poseCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 {
   pose = *msg;
+  	 pose1.name="Center";
+	 pose1.cx= pose.pose.pose.position.x;
+	 pose1.cy= pose.pose.pose.position.y;
+	 pose1.cz=0.0;
 }
 
 
@@ -316,8 +320,8 @@ int main(int argc, char **argv)
 	}	
 
 	 goal.name="Goal";
-	 goal.cx=0.0;
-	 goal.cy=0.0;
+	 goal.cx=-3.1;
+	 goal.cy=-2.1;
 	 goal.cz=0.0;
 	 center.name="Center";
 	 center.cx=0.0;
@@ -402,7 +406,7 @@ int main(int argc, char **argv)
 			break;
 		 case rescue:
 		 	go(goal);
-		 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25){
+		 	if (goal.cx<pose1.cx+0.15 and goal.cx>pose1.cx-0.15 and goal.cy>pose1.cy-0.15){
 			 	if(hayTarget())
 					state = search;
 				else{
