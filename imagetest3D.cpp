@@ -15,20 +15,39 @@
 	
 		HUBIGORANGE = 360; //35;
 		HLBIGORANGE = 360; //0;
+		SUBIGORANGE = 360; 
+		SLBIGORANGE = 360; 
+		VUBIGORANGE = 360;
+		VLBIGORANGE = 360;
 	
 		HURED = 360; //360;
 		HLRED = 360; //336;
 		SURED = 360; //275;
 		SLRED = 360; //180;
+		VURED = 360;
+		VLRED = 360;
 	
 		HUBLUE = 360; //265;
 		HLBLUE = 360; //150;
+		SUBLUE = 360; 
+		SLBLUE = 360; 
+		VUBLUE = 360;
+		VLBLUE = 360;
 	
 		HUYELLOW = 360; //149;
 		HLYELLOW = 360; //36;
+		SUYELLOW  = 360; 
+		SLYELLOW  = 360; 
+		VUYELLOW  = 360;
+		VLYELLOW  = 360;
 		
 		HUPINK = 360; //335;
 		HLPINK = 360; //266;
+		SUPINK = 360; 
+		SLPINK = 360; 
+		VUPINK = 360;
+		VLPINK = 360;
+
 		distpix = 10;
 		sizemin = 20;
 
@@ -50,18 +69,37 @@
 		cvCreateTrackbar("Hue Lower RED", "Filtrador Pelotas", &HLRED, 360, NULL);
 		cvCreateTrackbar("Sat Upper RED", "Filtrador Pelotas", &SURED, 360, NULL);
 		cvCreateTrackbar("Sat Lower RED", "Filtrador Pelotas", &SLRED, 360, NULL);
+		cvCreateTrackbar("V Upper RED", "Filtrador Pelotas", &VURED, 360, NULL);
+		cvCreateTrackbar("V Lower RED", "Filtrador Pelotas", &VLRED, 360, NULL);
 
 		cvCreateTrackbar("Hue Upper BIGORANGE", "Filtrador Pelotas", &HUBIGORANGE, 360, NULL);
 		cvCreateTrackbar("Hue Lower BIGORANGE", "Filtrador Pelotas", &HLBIGORANGE, 360, NULL);
+		cvCreateTrackbar("Sat Upper BIGORANGE", "Filtrador Pelotas", &SUBIGORANGE, 360, NULL);
+		cvCreateTrackbar("Sat Lower BIGORANGE", "Filtrador Pelotas", &SLBIGORANGE, 360, NULL);
+		cvCreateTrackbar("V Upper BIGORANGE", "Filtrador Pelotas", &VUBIGORANGE, 360, NULL);
+		cvCreateTrackbar("V Lower BIGORANGE", "Filtrador Pelotas", &VLBIGORANGE, 360, NULL);
+
 
 		cvCreateTrackbar("Hue Upper BLUE", "Filtrador Balizas", &HUBLUE, 360, NULL);
 		cvCreateTrackbar("Hue Lower BLUE", "Filtrador Balizas", &HLBLUE, 360, NULL);
+		cvCreateTrackbar("Sat Upper BLUE", "Filtrador Balizas", &SUBLUE, 360, NULL);
+		cvCreateTrackbar("Sat Lower BLUE", "Filtrador Balizas", &SLBLUE, 360, NULL);
+		cvCreateTrackbar("V Upper BLUE", "Filtrador Balizas", &VUBLUE, 360, NULL);
+		cvCreateTrackbar("V Lower BLUE", "Filtrador Balizas", &VLBLUE, 360, NULL);
 
 		cvCreateTrackbar("Hue Upper PINK", "Filtrador Balizas", &HUPINK, 360, NULL);
 		cvCreateTrackbar("Hue Lower PINK", "Filtrador Balizas", &HLPINK, 360, NULL);
+		cvCreateTrackbar("Sat Upper PINK", "Filtrador Balizas", &SUPINK, 360, NULL);
+		cvCreateTrackbar("Sat Lower PINK", "Filtrador Balizas", &SLPINK, 360, NULL);
+		cvCreateTrackbar("V Upper PINK", "Filtrador Balizas", &VUPINK, 360, NULL);
+		cvCreateTrackbar("V Lower PINK", "Filtrador Balizas", &VLPINK, 360, NULL);
 
 		cvCreateTrackbar("Hue Upper YELLOW", "Filtrador Balizas", &HUYELLOW, 360, NULL);
 		cvCreateTrackbar("Hue Lower YELLOW", "Filtrador Balizas", &HLYELLOW, 360, NULL);
+		cvCreateTrackbar("Sat Upper YELLOW", "Filtrador Balizas", &SUYELLOW, 360, NULL);
+		cvCreateTrackbar("Sat Lower YELLOW", "Filtrador Balizas", &SLYELLOW, 360, NULL);
+		cvCreateTrackbar("V Upper YELLOW", "Filtrador Balizas", &VUYELLOW, 360, NULL);
+		cvCreateTrackbar("V Lower YELLOW", "Filtrador Balizas", &VLYELLOW, 360, NULL);
 
 		cvCreateTrackbar("Distacia pixeles", "Filtrador Balizas", &distpix, 100, NULL);
 		cvCreateTrackbar("Tamaño minimo", "Filtrador Balizas", &sizemin, 100, NULL);
@@ -97,20 +135,25 @@
 				if (((hsv.h >= HLORANGE) && (hsv.h <= HUORANGE)) && ((hsv.s >= ((float)SLORANGE/360)) && (hsv.s <= ((float)SUORANGE/360))) 
 										&& ((hsv.v >= ((float)VLORANGE/360)) && (hsv.v <= ((float)VUORANGE/360)))){
 					PCxyzrgbout.push_back(*it);
-					addNode(ORANGE, it->x, it->y, it->z);
-				}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))){
-					PCxyzrgbout.push_back(*it);
-					addNode(RED, it->x, it->y, it->z);				
-				}else if(((hsv.h >= HLBIGORANGE) && (hsv.h <= BIGORANGE))){
+					addNode(ORANGE, it->x, it->y, it->z);				
+				}else if(((hsv.h >= HLBIGORANGE) && (hsv.h <= HUBIGORANGE)) && ((hsv.s >= ((float)SLBIGORANGE/360)) && (hsv.s <= ((float)SUBIGORANGE/360))) 
+										&& ((hsv.v >= ((float)VLBIGORANGE/360)) && (hsv.v <= ((float)VUBIGORANGE/360)))){
 					PCxyzrgbout.push_back(*it);
 					addNode(BIGORANGE, it->x, it->y, it->z);
-				}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE))){
+				}else if(((hsv.h >= HLRED) && (hsv.h <= HURED)) && ((hsv.s >= ((float)SLRED/360)) && (hsv.s <= ((float)SURED/360)))
+										&& ((hsv.v >= ((float)VLRED/360)) && (hsv.v <= ((float)VURED/360)))){
+					PCxyzrgbout.push_back(*it);
+					addNode(RED, it->x, it->y, it->z);
+				}else if(((hsv.h >= HLBLUE) && (hsv.h <= HUBLUE)) && ((hsv.s >= ((float)SLBLUE/360)) && (hsv.s <= ((float)SUBLUE/360)))
+										&& ((hsv.v >= ((float)VLBLUE/360)) && (hsv.v <= ((float)VUBLUE/360)))){
 					PCxyzrgbout.push_back(*it);
 					addNode(BLUE, it->x, it->y, it->z);
-				}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW))){
+				}else if(((hsv.h >= HLYELLOW) && (hsv.h <= HUYELLOW)) && ((hsv.s >= ((float)SLYELLOW/360)) && (hsv.s <= ((float)SUYELLOW/360)))
+										&& ((hsv.v >= ((float)VLYELLOW/360)) && (hsv.v <= ((float)VUYELLOW/360)))){
 					PCxyzrgbout.push_back(*it);
 					addNode(YELLOW, it->x, it->y, it->z);
-				}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK))){
+				}else if(((hsv.h >= HLPINK) && (hsv.h <= HUPINK)) && ((hsv.s >= ((float)SLPINK/360)) && (hsv.s <= ((float)SUPINK/360)))
+										&& ((hsv.v >= ((float)VLPINK/360)) && (hsv.v <= ((float)VUPINK/360)))){
 					PCxyzrgbout.push_back(*it);
 					addNode(PINK, it->x, it->y, it->z);
 				}else{

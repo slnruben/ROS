@@ -15,7 +15,11 @@
 #include <pcl/impl/point_types.hpp>
 #include <pcl/point_types_conversion.h>
 #include <string>
+#include "tf/transform_listener.h"
+#include "pcl_ros/point_cloud.h"
+#include <sensor_msgs/PointCloud2.h>
 #include <pcl/io/io.h>
+#include <pcl/point_types.h>
 #include "pcl_ros/transforms.h"
 #include "pcl_ros/impl/transforms.hpp"
 #include "tf/transform_listener.h"
@@ -67,20 +71,39 @@ private:
 
 	int HUBIGORANGE;
 	int HLBIGORANGE;
+	int SUBIGORANGE;
+	int SLBIGORANGE;
+	int VUBIGORANGE;
+	int VLBIGORANGE;
 
 	int HURED;
 	int HLRED;
 	int SURED;
 	int SLRED;
+	int VURED;
+	int VLRED;
 
 	int HUBLUE; //265;
 	int HLBLUE; //150;
+	int SUBLUE;
+	int SLBLUE;
+	int VUBLUE;
+	int VLBLUE;
+
 
 	int HUYELLOW;
 	int HLYELLOW;
-	
+	int SUYELLOW;
+	int SLYELLOW;
+	int VUYELLOW;
+	int VLYELLOW;
+
 	int HUPINK;
 	int HLPINK;
+	int SUPINK;
+	int SLPINK;
+	int VUPINK;
+	int VLPINK;
 
 	int distpix;
 	int sizemin;
@@ -101,7 +124,7 @@ public:
 	void initObjetos();
 	void addArray(NodeColor *node, int i);
 	void reconnaissance();
-	void searchBaliza(int colortop, int colorbot, int i);
+	void searchBaliza(int top, int bot, int i);
 	void searchOther(NodeColor *node, int pos);
 	void publishObjects();
 };
