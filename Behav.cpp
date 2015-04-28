@@ -162,7 +162,7 @@ void poseCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 
 
 void
-go(Object o)	
+go2gpos(Object o)	
 {
 	float diffpose;
 	
@@ -179,7 +179,7 @@ go(Object o)
 		w = v = 0.0;
 	}else{
 
-		angle2goal = normalizePi(atan2(goalpose.pose.position.y - pose.pose.pose.position.y, goalpose.pose.position.x -pose.pose.pose.position.x) - yaw);
+		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
 				
 
 		if(fabs(angle2goal) > 0.1)
@@ -204,6 +204,47 @@ go(Object o)
 	
 	cmdpub_t.publish(cmd);
 }
+
+
+void
+go2pos(Object o)	
+{
+
+	float a;
+	a=o.cy
+	if(o.cy >1){
+		w=-0.3;
+	}else if(o.cy >0.2){
+		w=-0.1*a;
+	}else if(o.cy <0.2){
+		w=0.1*a;
+	}else if(o.cy <1){
+		w=0.3;
+	}else{
+		w=0.0;
+	}
+
+	if(o.cx>1){
+		v=0.3;
+	}else if(o.cx >0.5 and o.cx <1)
+		v=0.2;
+	}else{
+		v=0.0;
+	}
+
+	geometry_msgs::Twist cmd;
+	
+	cmd.linear.x = v;
+	cmd.linear.y = 0.0;
+	cmd.linear.z = 0.0;
+	cmd.angular.x = 0.0;
+	cmd.angular.y = 0.0;
+	cmd.angular.z = w;
+
+	
+	cmdpub_t.publish(cmd);
+}
+
 
 // void Behav::goalCB(const geometry_msgs::PoseStamped::ConstPtr& msg)
 // {
@@ -384,7 +425,7 @@ int main(int argc, char **argv)
 
 	  switch (state){
 	     case begin:
-			go(center);
+			go2gpos(center);
 
 			if(hayTarget())
 				state = search;
@@ -397,7 +438,7 @@ int main(int argc, char **argv)
 		 	break;
 	     case search:
 	     	target = getTarget();
-			go(target.o);
+			go2gpos(target.o);
 			if(target.o.cx<0.5){
 				target.found=true;
 				peep();
@@ -405,8 +446,8 @@ int main(int argc, char **argv)
 			}					
 			break;
 		 case rescue:
-		 	go(goal);
-		 	if (goal.cx<pose1.cx+0.15 and goal.cx>pose1.cx-0.15 and goal.cy>pose1.cy-0.15){
+		 	go2gpos(goal);
+		 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
 			 	if(hayTarget())
 					state = search;
 				else{
