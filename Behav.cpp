@@ -80,10 +80,9 @@
 	int state;
 	static const int num_objects = 3;	
 	static const int begin=0;
-	static const int lost=1;
-	static const int search=2;
-	static const int end=3;
-	static const int rescue=4;
+	static const int search=1;
+	static const int end=2;
+	static const int rescue=3;
 	std::string emp = "empty";
 
 	struct Object{
@@ -107,19 +106,19 @@
 
 	std::string id;
 
-	ros::NodeHandle n;
-	ros::Publisher posePub;
 
-	tf::TransformBroadcaster tfB;
+	//ros::Publisher posePub;
+
 
 	geometry_msgs::PoseWithCovarianceStamped pose;
+	geometry_msgs::PoseWithCovarianceStamped fakepose;
 	geometry_msgs::PoseStamped goalpose;
 	kobuki_msgs::Sound sound_cmd;
 	bool goalrecv = false;
 
 
 	ros::Subscriber robotposesub ;
-	//ros::Subscriber submodelsub = n.subscribe("/gazebo/model_states", 1000, &fakeposeCB::poseCB, this);
+	ros::Subscriber submodelsub;
 	ros::Subscriber goalsub ;
 	ros::Publisher  cmdpub_t ;
 	ros::Publisher  cmdpub_s ; 
@@ -159,19 +158,76 @@ void poseCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 	 pose1.cz=0.0;
 }
 
+void fakeposeCB(const gazebo_msgs::ModelStates &states)
+{
+	for(int i=0; i< states.name.size(); i++)
+	{
+		//std::cout<<states.name[i]<<std::endl;
+		if(states.name[i] == "mobile_base")
+		{
+	//std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+
+
+			fakepose.pose.pose.position.x = states.pose[i].position.x;
+			fakepose.pose.pose.position.y = states.pose[i].position.y;
+			fakepose.pose.pose.position.z = states.pose[i].position.z;
+
+
+			tf::Quaternion q2(states.pose[i].orientation.x, states.pose[i].orientation.y, states.pose[i].orientation.z, states.pose[i].orientation.w);
+		
+			fakepose.pose.pose.orientation.x = q2.x();
+			fakepose.pose.pose.orientation.y = q2.y();
+			fakepose.pose.pose.orientation.z = q2.z();
+			fakepose.pose.pose.orientation.w = q2.w();
+
+			for (int i = 0; i < 36; i++)
+				fakepose.pose.covariance[i] = 0.0;
+		
+			//Fake uncertainty
+			float sx2 = 0.2;
+			float sy2 = 0.2;
+			float st2 = 0.1; //rads
+
+			fakepose.pose.covariance[0] = sx2; //X*X
+			fakepose.pose.covariance[1 * 6 + 1] = sy2; //Y*Y
+			fakepose.pose.covariance[5 * 6 + 5] = st2; //rZ*rZ
+			//***************//
+			pose1.name="Center";
+			pose1.cx= fakepose.pose.pose.position.x;
+			pose1.cy= fakepose.pose.pose.position.y;
+			pose1.cz=0.0;
+			//***************//
+		}
+	}
+}
 
 
 void
 go2gpos(Object o)	
 {
 	float diffpose;
+
+// std::cout<<"x:"<<fakepose.pose.pose.position.x<<std::endl;
+// std::cout<<"y:"<<fakepose.pose.pose.position.y<<std::endl;	
+// std::cout<<"z:"<<fakepose.pose.pose.orientation.z<<std::endl;
+// std::cout<<"w:"<<fakepose.pose.pose.orientation.w<<std::endl;	
+
+	diffpose = sqrt( (fakepose.pose.pose.position.x-o.cx)*(fakepose.pose.pose.position.x-o.cx)+ (fakepose.pose.pose.position.y-o.cy)*(fakepose.pose.pose.position.y-o.cy)); 
 	
+	double roll, pitch, yaw;
+
+	tf::Quaternion q(fakepose.pose.pose.orientation.x, fakepose.pose.pose.orientation.y, fakepose.pose.pose.orientation.z, fakepose.pose.pose.orientation.w);
+	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+
+	/****************************************FAKE************************
 	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
 	
 	double roll, pitch, yaw;
-	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, pose.pose.pose.orientation.w);
+	//pose.pose.pose.orientation.z to 1.0
+	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
 	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-
+	****************************************FAKE************************/
 				
 	float v,w;
 	float angle2goal;
@@ -179,16 +235,20 @@ go2gpos(Object o)
 		w = v = 0.0;
 	}else{
 
-		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
-				
+		angle2goal = normalizePi(atan2(o.cy - fakepose.pose.pose.position.y, o.cx -fakepose.pose.pose.position.x) - yaw);
+	
+		/****************************************FAKE************************
+		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);	
+	****************************************FAKE************************/
+
 
 		if(fabs(angle2goal) > 0.1)
 		{
-			w = (angle2goal/fabs(angle2goal)) * 0.3;
+			w = (angle2goal/fabs(angle2goal)) * 0.5;
 			v = 0.0;
 		}else{
 			w = 0.0;
-			v = 0.3;
+			v = 0.35;
 		}
 	}
 
@@ -201,7 +261,13 @@ go2gpos(Object o)
 	cmd.angular.y = 0.0;
 	cmd.angular.z = w;
 
-	
+
+
+	std::cout<<"diffpose:"<<diffpose<<std::endl;
+	std::cout<<"angle:"<<angle2goal<<std::endl;
+
+	std::cout<<"v:"<<v<<std::endl;
+	std::cout<<"w:"<<w<<std::endl;	
 	cmdpub_t.publish(cmd);
 }
 
@@ -288,6 +354,49 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 
 }
 /////
+void lost() {
+
+
+
+////////////////////////////////////////////arreglar
+	geometry_msgs::Twist cmd;
+	bool bin=true;
+
+	if((fabs(pose1.cx)>2.0 or fabs(pose1.cy)>2.0))and bin==true{
+		go2gpos(center);
+		bin=true;
+	}else if(fabs(pose1.cx)>0.5 or fabs(pose1.cy)>0.5){
+		bin =true;
+	}else if(fabs(pose1.cx)<0.5 or fabs(pose1.cy)<0.5){
+
+	
+	cmd.linear.x = 0.3;
+	cmd.linear.y = 0.0;
+	cmd.linear.z = 0.0;
+	cmd.angular.x = 0.0;
+	cmd.angular.y = 0.0;
+	cmd.angular.z = 0.4;
+
+	
+	cmdpub_t.publish(cmd);
+	bin=false;
+	}else if(bin==true){
+		go2gpos(center);
+	}else if(bin==false){
+		cmd.linear.x = 0.3;
+		cmd.linear.y = 0.0;
+		cmd.linear.z = 0.0;
+		cmd.angular.x = 0.0;
+		cmd.angular.y = 0.0;
+		cmd.angular.z = 0.4;
+
+		
+		cmdpub_t.publish(cmd);
+	}
+
+
+}
+
 bool terminado() {
 		int i=0;
 		int k=0;
@@ -323,9 +432,13 @@ int main(int argc, char **argv)
 {
 
 
-	ros::init(argc, argv, std::string(argv[1]));
+	ros::init(argc, argv, std::string("behav"));
+
+
+	ros::NodeHandle n;
 
 	tf::TransformListener tfL;
+	
 
 	ros::Rate loop_rate(10);
 	int count = 0;
@@ -334,7 +447,9 @@ int main(int argc, char **argv)
 
 	inline double normalizePi(double data);
 
-	cmdpub_t = n.advertise<geometry_msgs::Twist>("/robot/commands/velocity", 1000);
+	//robotposesub = n.subscribe("/robot_pos", 1000, &Behav::poseCB, this);
+	submodelsub = n.subscribe("/gazebo/model_states", 1000, &fakeposeCB);
+	cmdpub_t = n.advertise<geometry_msgs::Twist>("mobile_base/commands/velocity", 1);
 	cmdpub_s = n.advertise<kobuki_msgs::Sound>("mobile_base/commands/sound", 1); 
 
 
@@ -355,13 +470,16 @@ int main(int argc, char **argv)
 	 center.cy=0.0;
 	 center.cz=0.0;
 
- 	 state = 4;   
+ 	 state = 3;   
 
  	 ball target;
 	/////////////////////////////////////////////////
 	
 	while (ros::ok())
 	{	
+
+
+
 		tfL.getFrameStrings(frameList);
 		for (it = frameList.begin(); it != frameList.end(); ++it) {
 			std::string frame = *it;
@@ -405,36 +523,16 @@ int main(int argc, char **argv)
 				ROS_WARN("%s", ex.what());
 			}
 		}
-		for (int i = 0; i < num_objects; ++i){ 
-		  std::cout<<"bolas:"<<array[i].o.name<<std::endl;
-		}
+		// for (int i = 0; i < num_objects; ++i){ 
+		//   std::cout<<"bolas:"<<array[i].o.name<<std::endl;
+		// }
 
-	  switch (state){
-	     case begin:
-			go2gpos(center);
+	 	switch (state){
+		     case begin:
+		     			 		std::cout<<"begin:"<<std::endl;
+		     	lost();
 
-			if(hayTarget())
-				state = search;
-			else{
-				if(terminado())
-					state= end;
-				else
-					state=begin;
-			}
-		 	break;
-	     case search:
-	     	target = getTarget();
-			go2gpos(target.o);
-			if(target.o.cx<0.5){
-				target.found=true;
-				peep();
-				state= rescue;
-			}					
-			break;
-		 case rescue:
-		 	go2gpos(goal);
-		 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
-			 	if(hayTarget())
+				if(hayTarget())
 					state = search;
 				else{
 					if(terminado())
@@ -442,17 +540,44 @@ int main(int argc, char **argv)
 					else
 						state=begin;
 				}
-		 	}
-		 	break;
-		 case end:	
-		 break;
-}
-ros::spinOnce();
-loop_rate.sleep();
-++count;
+			 	break;
+		     case search:
+		     	target = getTarget();
+				go2gpos(target.o);
+				if(target.o.cx<0.5){
+					target.found=true;
+					peep();
+					state= rescue;
+				}					
+				break;
+			 case rescue:
+			 		std::cout<<"rescue:"<<std::endl;
+			 	go2gpos(goal);
 
-return 0;
+	// std::cout<<"POS = x:"<<pose1.cx<<std::endl;
+	// std::cout<<"POS = y:"<<pose1.cy<<std::endl;	
+
+			 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
+				 	if(hayTarget())
+						state = search;
+					else{
+						if(terminado())
+							state= end;
+						else
+							state=begin;
+					}
+			 	}
+			 	break;
+			 case end:	
+			 break;
+		}
+		ros::spinOnce();
+		loop_rate.sleep();
+		++count;
 
 
-}
+
+
+	}
+			return 0;
 }
