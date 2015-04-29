@@ -209,9 +209,8 @@ go2gpos(Object o)
 void
 go2pos(Object o)	
 {
-
-	float a;
-	a=o.cy
+	float v,w;
+	float a=o.cy;
 	if(o.cy >1){
 		w=-0.3;
 	}else if(o.cy >0.2){
@@ -226,7 +225,7 @@ go2pos(Object o)
 
 	if(o.cx>1){
 		v=0.3;
-	}else if(o.cx >0.5 and o.cx <1)
+	}else if(o.cx >0.5 and o.cx <1){
 		v=0.2;
 	}else{
 		v=0.0;
@@ -332,22 +331,9 @@ int main(int argc, char **argv)
 	int count = 0;
 	int f_balls = 0;
 	bool ball_in_balls = false;
-/////////////////////////////////////////////////77
 
-
-//----------------------------------------------------------
 	inline double normalizePi(double data);
 
-//----------------------------------------------------------
-
-
-
-
-	
-	//tfs
-
-
-	//·///////////////////////////////////////////////////////////////////////////////////////
 	cmdpub_t = n.advertise<geometry_msgs::Twist>("/robot/commands/velocity", 1000);
 	cmdpub_s = n.advertise<kobuki_msgs::Sound>("mobile_base/commands/sound", 1); 
 
@@ -369,10 +355,10 @@ int main(int argc, char **argv)
 	 center.cy=0.0;
 	 center.cz=0.0;
 
- 	 state = 0;   
+ 	 state = 4;   
 
  	 ball target;
-	/////////////////////////////////////////////////777
+	/////////////////////////////////////////////////
 	
 	while (ros::ok())
 	{	
@@ -419,9 +405,9 @@ int main(int argc, char **argv)
 				ROS_WARN("%s", ex.what());
 			}
 		}
-
-
-
+		for (int i = 0; i < num_objects; ++i){ 
+		  std::cout<<"bolas:"<<array[i].o.name<<std::endl;
+		}
 
 	  switch (state){
 	     case begin:
@@ -454,7 +440,7 @@ int main(int argc, char **argv)
 					if(terminado())
 						state= end;
 					else
-						state=lost;
+						state=begin;
 				}
 		 	}
 		 	break;
