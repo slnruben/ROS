@@ -37,24 +37,24 @@ public:
 	virtual ~MCL();
 
 	void correct();
-	void predict();
-	//void publishInfo();
+	void publishInfo();
 	geometry_msgs::PoseWithCovarianceStamped getPose();
 
-	//void odomCB(const nav_msgs::Odometry::ConstPtr& msg);
-	//int getStates() {return NUMPARTICLES;};
+	void odomCB(const nav_msgs::Odometry::ConstPtr& msg);
+	int getStates() {return NUMPARTICLES;};
 private:
 
 	static const float field_width;
 	static const float field_height;
 	static const int NUMPARTICLES = 100;
+	static const int PERCEN_RANDOM_PARTICLES = 5;
 
 	void resetParticles();
 	void updatePos();
 	void reseed();
 	void normalize();
 
-	//void resetOdom();
+	void resetOdom();
 
 	void printParticles();
 
@@ -65,17 +65,17 @@ private:
 
 
 	void updateObservation2(std::string obs, std::string real);
-	//void publishOrientations();
-	//void publishPose();
+	void publishOrientations();
+	void publishPose();
 
 	float getProbPos(float ideal, float obs, float desv);
 	float getProbRot(float ideal, float obs, float desv);
 
 	ros::NodeHandle n;
 
-	//ros::Publisher part_pub;
-	//ros::Publisher pose_pub;
-	//ros::Subscriber odom_sub;
+	ros::Publisher part_pub;
+	ros::Publisher pose_pub;
+	ros::Subscriber odom_sub;
 	tf::TransformListener tfL;
 	tf::TransformBroadcaster tfB;
 
