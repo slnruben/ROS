@@ -6,47 +6,47 @@
 				//"/camera/depth_registered/points", 1,
 				&Imagetest3D::Imagetest3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
-		HUORANGE = 360; //ImageConverter3D::HURANGE
-		HLORANGE = 360; //336;
+		HUORANGE = 355; //ImageConverter3D::HURANGE
+		HLORANGE = 251; //336;
 		SUORANGE = 360; //360;
-		SLORANGE = 360; //276;
+		SLORANGE = 300; //276;
 		VUORANGE = 360;
-		VLORANGE = 360;
+		VLORANGE = 239;
 	
-		HUBIGORANGE = 360; //35;
-		HLBIGORANGE = 360; //0;
+		HUBIGORANGE = 37; //35;
+		HLBIGORANGE = 3; //0;
 		SUBIGORANGE = 360; 
-		SLBIGORANGE = 360; 
-		VUBIGORANGE = 360;
-		VLBIGORANGE = 360;
+		SLBIGORANGE = 199; 
+		VUBIGORANGE = 282;
+		VLBIGORANGE = 192;
 	
-		HURED = 360; //360;
-		HLRED = 360; //336;
-		SURED = 360; //275;
-		SLRED = 360; //180;
-		VURED = 360;
-		VLRED = 360;
+		HURED = 127; //360;
+		HLRED = 121; //336;
+		SURED = 260; //275;
+		SLRED = 219; //180;
+		VURED = 276;
+		VLRED = 84;
 	
-		HUBLUE = 360; //265;
-		HLBLUE = 360; //150;
+		HUBLUE = 228; //265;
+		HLBLUE = 199; //150;
 		SUBLUE = 360; 
-		SLBLUE = 360; 
-		VUBLUE = 360;
-		VLBLUE = 360;
+		SLBLUE = 275; 
+		VUBLUE = 276;
+		VLBLUE = 188;
 	
-		HUYELLOW = 360; //149;
-		HLYELLOW = 360; //36;
+		HUYELLOW = 72; //149;
+		HLYELLOW = 55; //36;
 		SUYELLOW  = 360; 
-		SLYELLOW  = 360; 
-		VUYELLOW  = 360;
-		VLYELLOW  = 360;
+		SLYELLOW  = 179; 
+		VUYELLOW  = 281;
+		VLYELLOW  = 149;
 		
-		HUPINK = 360; //335;
-		HLPINK = 360; //266;
+		HUPINK = 340; //335;
+		HLPINK = 274; //266;
 		SUPINK = 360; 
-		SLPINK = 360; 
-		VUPINK = 360;
-		VLPINK = 360;
+		SLPINK = 206; 
+		VUPINK = 281;
+		VLPINK = 149;
 
 		distpix = 10;
 		sizemin = 20;
@@ -118,7 +118,11 @@
 				
 		sensor_msgs::PointCloud2 out;
 		sensor_msgs::PointCloud2 pcl_bf;
- 		pcl_ros::transformPointCloud("/base_footprint", *msg, pcl_bf, tf_listener); 
+		try {
+ 			pcl_ros::transformPointCloud("/base_link", *msg, pcl_bf, tf_listener);	
+		} catch (tf::TransformException & ex) {
+		ROS_WARN("%s", ex.what());
+	}
 		pcl::fromROSMsg(pcl_bf, PCxyzrgb);
 
 		PCxyzrgbout = PCxyzrgb;
@@ -393,7 +397,7 @@ ROS_INFO(" ");
 			if(array[i].boolean) {
 				tf::StampedTransform RB;
 
-				RB.frame_id_ = "/base_footprint";
+				RB.frame_id_ = "/base_link";
 				RB.child_frame_id_ = array[i].name;
 				RB.stamp_ = ros::Time::now() + ros::Duration(0.5);
 
