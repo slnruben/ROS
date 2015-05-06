@@ -81,8 +81,8 @@
 	static const int num_objects = 3;	
 	static const int begin=0;
 	static const int search=1;
-	static const int end=2;
-	static const int rescue=3;
+	static const int end=3;
+	static const int rescue=2;
 	std::string emp = "empty";
 
 	struct Object{
@@ -102,6 +102,7 @@
 	Object goal;
 	Object center;
 	Object pose1;
+
 
 
 	std::string id;
@@ -362,7 +363,7 @@ void lost() {
 	geometry_msgs::Twist cmd;
 	bool bin=true;
 
-	if((fabs(pose1.cx)>2.0 or fabs(pose1.cy)>2.0))and bin==true{
+	if((fabs(pose1.cx)>2.0 or fabs(pose1.cy)>2.0)and bin==true){
 		go2gpos(center);
 		bin=true;
 	}else if(fabs(pose1.cx)>0.5 or fabs(pose1.cy)>0.5){
@@ -470,15 +471,23 @@ int main(int argc, char **argv)
 	 center.cy=0.0;
 	 center.cz=0.0;
 
- 	 state = 3;   
+ 	 state = 1;   
 
  	 ball target;
+ 	 ball prueba;
+ 	 Object p_ball;
+ 	p_ball.name="pelota";
+	p_ball.cx=2.0;
+	p_ball.cy=-0.2;
+	p_ball.cz=0.0;
+	prueba.o=p_ball;
+	prueba.found=false;
 	/////////////////////////////////////////////////
 	
 	while (ros::ok())
 	{	
 
-
+/*
 
 		tfL.getFrameStrings(frameList);
 		for (it = frameList.begin(); it != frameList.end(); ++it) {
@@ -526,7 +535,7 @@ int main(int argc, char **argv)
 		// for (int i = 0; i < num_objects; ++i){ 
 		//   std::cout<<"bolas:"<<array[i].o.name<<std::endl;
 		// }
-
+*/
 	 	switch (state){
 		     case begin:
 		     			 		std::cout<<"begin:"<<std::endl;
@@ -542,9 +551,11 @@ int main(int argc, char **argv)
 				}
 			 	break;
 		     case search:
-		     	target = getTarget();
+		     	std::cout<<"search:"<<std::endl;
+		     	//target = getTarget();
+		     	target = prueba;
 				go2gpos(target.o);
-				if(target.o.cx<0.5){
+				if(pose1.cx >target.o.cx-0.25 and pose1.cx <target.o.cx+0.25){
 					target.found=true;
 					peep();
 					state= rescue;
@@ -558,6 +569,7 @@ int main(int argc, char **argv)
 	// std::cout<<"POS = y:"<<pose1.cy<<std::endl;	
 
 			 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
+			 		peep();
 				 	if(hayTarget())
 						state = search;
 					else{
