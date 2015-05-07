@@ -2,8 +2,8 @@
 
 	Imagetest3D::Imagetest3D() {
 		image_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(
-				"/camera/depth/points", 1,
-				//"/camera/depth_registered/points", 1,
+				//"/camera/depth/points", 1,
+				"/camera/depth_registered/points", 1,
 				&Imagetest3D::Imagetest3D::imageCb, this);
 		image_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/pc_filtered", 1);
 		HUORANGE = 355; //ImageConverter3D::HURANGE
@@ -13,7 +13,7 @@
 		VUORANGE = 360;
 		VLORANGE = 239;
 	
-		HUBIGORANGE = 37; ///35;
+		HUBIGORANGE = 37; //35;
 		HLBIGORANGE = 3; //0;
 		SUBIGORANGE = 360; 
 		SLBIGORANGE = 199; 
@@ -328,8 +328,8 @@ ROS_INFO(" ");
 		searchBaliza(YELLOW, PINK, 1);
 		searchBaliza(YELLOW, BLUE, 2);
 		searchBaliza(BLUE, PINK, 3);
-		searchOther(objetos[YELLOW].list, 4);
-		searchOther(objetos[BLUE].list, 5);
+		searchPorteria(objetos[YELLOW].list, 4);
+		searchPorteria(objetos[BLUE].list, 5);
 		searchOther(objetos[ORANGE].list, 6);
 		searchOther(objetos[BIGORANGE].list, 7);
 		searchOther(objetos[RED].list, 8);
@@ -376,10 +376,30 @@ ROS_INFO(" ");
 		}
 	}
 
-	void Imagetest3D::searchOther(NodeColor *node, int pos) {
-		int max;
+	void Imagetest3D::searchPorteria(NodeColor *node, int pos) {
+		float max;
 		NodeColor *aux = NULL;
-		max = 0;
+		max = 0.0;
+		while(node != NULL){
+			if(node->total > max) {
+				aux = node;
+				max = node->total;
+			}
+			node = node->next;
+		}
+		if(aux != NULL) {
+			if((aux->cx < 2.0 && aux->total > 1300) || (aux->cx > 2.0 && aux->total > 300)){
+				addArray(aux, pos);
+				//ROS_INFO("%f", aux->total);
+			}
+		}
+		
+	}
+
+	void Imagetest3D::searchOther(NodeColor *node, int pos) {
+		float max;
+		NodeColor *aux = NULL;
+		max = 0.0;
 		while(node != NULL){
 			if(node->total > max) {
 				aux = node;

@@ -125,6 +125,7 @@ public:
 	void addArray(NodeColor *node, int i);
 	void reconnaissance();
 	void searchBaliza(int top, int bot, int i);
+	void searchPorteria(NodeColor *node, int pos);
 	void searchOther(NodeColor *node, int pos);
 	void publishObjects();
 };
