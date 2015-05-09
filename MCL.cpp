@@ -416,7 +416,7 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		x = L2H.getOrigin().x() * cos(-yaw) - L2H.getOrigin().y() * sin(-yaw); //Porque es la vista desde la baliza al robot
 		y = L2H.getOrigin().x() * sin(-yaw) + L2H.getOrigin().y() * cos(-yaw);
 //std::cerr<<"x = ("<<x<<") y: ("<<y<<")"<<std::endl;
-		float angle2ideal = normalizePi(atan2(y, x));// + M_PI);
+		float angle2ideal = normalizePi(atan2(y, x) + M_PI);
 		float dista2ideal = sqrt(x * x + y * y);
 
 		float desvDist = 0.2; //20 cms
