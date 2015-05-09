@@ -7,7 +7,7 @@
 #include "MCL.h"
 
 const float MCL::field_width = 6.0;
-const float MCL::field_height = 5.0;
+const float MCL::field_height = 4.1;
 
 MCL::MCL() {
 
