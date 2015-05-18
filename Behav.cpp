@@ -373,7 +373,7 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 void borrarpelotas(ball b){
 	if(b.time >= ros::Time::now() - ros::Duration(1.0) and b.found==false){
 		  b.o.name="empty";
-		  state=0;
+		  //state=0;
 	}
 }
 
@@ -444,7 +444,6 @@ int main(int argc, char **argv)
 
 	ros::Rate loop_rate(10);
 	int count = 0;
-	int f_balls = 0;
 	bool ball_in_balls = false;
 
 	inline double normalizePi(double data);
@@ -490,8 +489,8 @@ int main(int argc, char **argv)
 	{	
 
 
-
 		tfL.getFrameStrings(frameList);
+		balls.clear();
 		for (it = frameList.begin(); it != frameList.end(); ++it) {
 			std::string frame = *it;
 			if(isPrefix("pelota_", frame)){
@@ -501,14 +500,17 @@ int main(int argc, char **argv)
 
 		tf::StampedTransform L2W;
 
+int k = 0;
 		for (it = balls.begin(); it != balls.end(); ++it) {
+	   ROS_INFO("it %d", k);
+		   std::cout<<"it:"<<*it<<std::endl;
+k++;
 			ball_in_balls = false;
 	
 
 				for (int i = 0; i < num_objects; ++i){ 
 					if(array[i].o.name.compare(*it)==0 and ball_in_balls==false){
 						ball_in_balls  = true;
-						f_balls=i;
 					}	
 				}
 
@@ -518,24 +520,26 @@ int main(int argc, char **argv)
 				tfL.lookupTransform("base_link", *it, //poner inverse si sale negativo
 					ros::Time::now() - ros::Duration(0.2), L2W);
 				  for (int i = 0; i < num_objects; ++i){ 
+		   std::cout<<"i: "<<i<<std::endl;
 				  	//bola nueva 
 					if(array[i].o.name.compare("empty")==0 and ball_in_balls==false){ //comprobar length
 				   std::cout<<"???????????????????NUEVA?????????????????"<<std::endl;
-				  			array[f_balls].o.name = *it;
-						    array[f_balls].o.cx = L2W.getOrigin().x();	
-						    array[f_balls].o.cy = L2W.getOrigin().y();
-						    array[f_balls].o.cz = L2W.getOrigin().z();
-						    array[f_balls].found = false;
+				  		    array[i].o.name = *it;
+						    array[i].o.cx = L2W.getOrigin().x();	
+						    array[i].o.cy = L2W.getOrigin().y();
+						    array[i].o.cz = L2W.getOrigin().z();
+						    array[i].found = false;
 	    					    array[i].time = ros::Time::now();
+						    ball_in_balls=true;
 						  
 
 				  	//actualiza
 				  	}else if(array[i].o.name.compare(*it)==0){ 
-		   std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!actualiza!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-				  		if(array[f_balls].found==false){
-						    array[f_balls].o.cx = L2W.getOrigin().x();	
-						    array[f_balls].o.cy = L2W.getOrigin().y();
-						    array[f_balls].o.cz = L2W.getOrigin().z();
+		   std::cout<<"!!!!!!!!!!!!!!!actualiza!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+				  		if(array[i].found==false){
+						    array[i].o.cx = L2W.getOrigin().x();	
+						    array[i].o.cy = L2W.getOrigin().y();
+						    array[i].o.cz = L2W.getOrigin().z();
 						    array[i].time = ros::Time::now();
 				  		}
  					}
@@ -578,7 +582,7 @@ int main(int argc, char **argv)
 				std::cout<<"x:"<<target.o.cx<<std::endl;
 				std::cout<<"y:"<<target.o.cy<<std::endl;
 
-				if(target.o.cx< MTODETECT){
+				if(target.o.cx< 0.68){
 					target.found=true;
 					peep();
 					state= rescue;
