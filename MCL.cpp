@@ -1,14 +1,13 @@
 /*
  * MCL.cpp
  *
- *  Created on: 07/12/2014
- *      Author: paco
+ * 
  */
 
 #include "MCL.h"
 
-const float MCL::field_width = 5.4;
-const float MCL::field_height = 7.4;
+const float MCL::field_width = 6.0;
+const float MCL::field_height = 4.1;
 
 MCL::MCL() {
 
@@ -20,64 +19,30 @@ MCL::MCL() {
 
 	part_pub = n.advertise<geometry_msgs::PoseArray>("/MCL_particles", 1000);
 	pose_pub = n.advertise<geometry_msgs::PoseStamped>("/MCL_pos", 1000);
-	resetodom_pub = n.advertise<std_msgs::Empty>("/robot/commands/reset_odometry", 1);
-
-	odom_sub = n.subscribe<nav_msgs::Odometry>("/robot/odom", 10, &MCL::odomCB, this);
-	map_sub = n.subscribe("/map", 1, &MCL::MapPCs, this);
-	camRobot_sub = n.subscribe("/camera/depth/points", 1, &MCL::RobotPCs, this);
-
+	odom_sub = n.subscribe<nav_msgs::Odometry>("/robot1/odom", 10, &MCL::odomCB,this);
 	seq = 0;
-	kdtree_inited = false;
 
-	map = new pcl::PointCloud<pcl::PointXYZRGB>::Ptr(
-			new pcl::PointCloud<pcl::PointXYZRGB>);
+	resetOdom();
 
-
-	distribution = new std::normal_distribution<float>(0.0, NOISE_LEVEL);
-	creset = 0;
 }
 
 MCL::~MCL() {
 
 }
 
-void MCL::RobotPCs(const ros::MessageEvent<sensor_msgs::PointCloud2 const>& event) {
+void MCL::resetOdom() {
+	odom.pose.pose.position.x = 0;
+	odom.pose.pose.position.y = 0;
+	odom.pose.pose.position.z = 0;
 
-	sensor_msgs::PointCloud2 in_basefoot;
-
-	pcl_ros::transformPointCloud("/base_footprint", *(event.getMessage()),
-			in_basefoot, tfL);
-
-	pcl::PointCloud<pcl::PointXYZRGB> inimage;
-
-	pcl::fromROSMsg(in_basefoot, inimage);
-
-	robotcam.clear();
-
-	pcl::PointCloud<pcl::PointXYZRGB>::iterator it;
-
-	int c = 0;
-	for (it = inimage.begin(); it != inimage.end(); ++it)
-		if ((it->x == it->x) && (it->z > 0.1)) {
-			c++;
-			robotcam.push_back(*it);
-		}
+	tf::Quaternion q;
+	q.setEuler(0.0, 0.0, 0.0);
+	odom.pose.pose.orientation.x = q.x();
+	odom.pose.pose.orientation.y = q.y();
+	odom.pose.pose.orientation.z = q.z();
+	odom.pose.pose.orientation.w = q.w();
 
 }
-
-void MCL::MapPCs(const sensor_msgs::PointCloud2::ConstPtr& mapmsg)
-{
-	pcl::fromROSMsg(*mapmsg, **map);
-
-	if(map->get()->size()>0)
-	{
-		kdtree.setInputCloud(*map);
-		kdtree_inited = true;
-	}
-
-
-}
-
 
 geometry_msgs::PoseWithCovarianceStamped MCL::getPose() {
 	geometry_msgs::PoseWithCovarianceStamped ret;
@@ -92,8 +57,56 @@ geometry_msgs::PoseWithCovarianceStamped MCL::getPose() {
 }
 
 void MCL::odomCB(const nav_msgs::Odometry::ConstPtr& msg) {
+	//Hallamos la diferencia con respecto al paso anterior
 
-	odom = *msg;
+	nav_msgs::Odometry odom_now;
+
+	odom_now.pose.pose.position.x = msg->pose.pose.position.x
+			- last_odom.pose.pose.position.x;
+	odom_now.pose.pose.position.y = msg->pose.pose.position.y
+			- last_odom.pose.pose.position.y;
+	odom_now.pose.pose.position.z = msg->pose.pose.position.z
+			- last_odom.pose.pose.position.z;
+
+	tf::Quaternion qnow(msg->pose.pose.orientation.x,
+			msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
+			msg->pose.pose.orientation.w);
+	tf::Quaternion qlast(last_odom.pose.pose.orientation.x,
+			last_odom.pose.pose.orientation.y,
+			last_odom.pose.pose.orientation.z,
+			last_odom.pose.pose.orientation.w);
+	tf::Quaternion qodom(odom.pose.pose.orientation.x,
+			odom.pose.pose.orientation.y, odom.pose.pose.orientation.z,
+			odom.pose.pose.orientation.w);
+
+	double lroll, lpitch, lyaw;
+	double nroll, npitch, nyaw;
+	double oroll, opitch, oyaw;
+
+	tf::Matrix3x3(qnow).getRPY(nroll, npitch, nyaw);
+	tf::Matrix3x3(qlast).getRPY(lroll, lpitch, lyaw);
+	tf::Matrix3x3(qodom).getRPY(oroll, opitch, oyaw);
+
+	tf::Quaternion q;
+	q.setEuler(0.0, 0.0, normalizePi(oyaw + nyaw - lyaw));
+
+	//std::cerr<<"{"<<nyaw-lyaw<<"}"<<std::endl;
+
+	odom.pose.pose.orientation.x = q.x();
+	odom.pose.pose.orientation.y = q.y();
+	odom.pose.pose.orientation.z = q.z();
+	odom.pose.pose.orientation.w = q.w();
+
+	float dlin = odom_now.pose.pose.position.x * cos(nyaw)
+			+ odom_now.pose.pose.position.y * sin(nyaw);
+
+	//std::cerr<<"["<<odom_now.pose.pose.position.x<<", "<<odom_now.pose.pose.position.y<<", "<<normalizePi(nyaw-lyaw)<<"] -> "<<dlin<<std::endl;
+
+	odom.pose.pose.position.x = odom.pose.pose.position.x + dlin;
+	odom.pose.pose.position.y = 0.0;
+	odom.pose.pose.position.z = 0.0;
+
+	last_odom = *msg;
 
 }
 
@@ -164,9 +177,11 @@ void MCL::updatePos() {
 		cay = sin(yaw);
 
 		//sdt::cerr<<"\t\t("<<cax<<","<<cay<<"): "<< particles[i].p<<std::endl;
-
+//std::cerr<<"Posiciones = ("<<cx<<","<<cy<<") propos: ("<<particles[i].p<<")"<<std::endl;
 		x = x + cx * particles[i].p;
 		y = y + cy * particles[i].p;
+
+//std::cerr<<"Centro angulo = ("<<xa<<","<<ya<<") propos: ("<<particles[i].p<<")"<<std::endl;
 
 		xa = xa + cax * particles[i].p;
 		ya = ya + cay * particles[i].p;
@@ -292,7 +307,9 @@ void MCL::publishPose() {
 	paray.header.seq = seq++;
 
 	paray.pose = pose.pose;
-
+/*std::cout<<"Real pose: "<<paray.pose.position.x<<", "<<
+				paray.pose.position.y<<", "<<
+				paray.pose.position.z<<")"<<std::endl;*/
 	pose_pub.publish(paray);
 }
 
@@ -302,310 +319,118 @@ void MCL::publishInfo() {
 	publishOrientations();
 }
 
+void MCL::correct() {
+	std::vector<std::string> frameList;
+	tfL.getFrameStrings(frameList);
 
-tf::Transform
-MCL::genNoise(tf::Transform &base)
-{
+	std::vector<std::string>::iterator it;
 
-	tf::Transform ret;
+	for (it = frameList.begin(); it != frameList.end(); ++it) {
 
-	ret.setOrigin(tf::Vector3(base.getOrigin().getX()*(*distribution)(generator),
-			base.getOrigin().getY()*(*distribution)(generator),
-			base.getOrigin().getZ()*(*distribution)(generator)));
+		std::string frame = *it;
 
+		if (isPrefix("perceived_", frame)) {
 
-	tf::Quaternion q(base.getRotation().getX(),
-			base.getRotation().getY(),
-			base.getRotation().getZ(),
-			base.getRotation().getW());
+			std::string parent;
 
-	double roll, pitch, yaw;
-	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+			parent = frame.substr(std::string("perceived_").length(),
+					std::string::npos);
+		
+			updateObservation2(frame, parent);
+		}
 
-	yaw = yaw * (*distribution)(generator);
+	}
 
-	q.setEuler(0.0, 0.0, yaw);
-
-	ret.setRotation(q);
-
-	return ret;
-
+	normalize();
+	updatePos();
+	reseed();
 }
 
-void MCL::predict() {
+void MCL::updateObservation2(std::string obs, std::string real) {
 
-	tf::Transform desp;
+	//Calcular la posición del robot en coordenadas de world, dada una observación
 
-	desp.setOrigin(
-			tf::Vector3(odom.pose.pose.position.x, odom.pose.pose.position.y,
-					odom.pose.pose.position.z));
-	desp.setRotation(
-			tf::Quaternion(odom.pose.pose.orientation.x,
-					odom.pose.pose.orientation.y, odom.pose.pose.orientation.z,
-					odom.pose.pose.orientation.w));
+	tf::StampedTransform O2R, W2R;
 
-	if (desp.getRotation().getX() != desp.getRotation().getX())
+	try {
+		tfL.lookupTransform(obs, "base_link", ros::Time::now(), O2R);
+		tfL.lookupTransform("world", "base_link", ros::Time::now(), W2R);
+
+	} catch (tf::TransformException & ex) {
+		ROS_WARN("%s", ex.what());
+	}
+
+/*std::cout<<"Real W2R with respect of the robot ("<<W2R.getOrigin().x()<<", "<<
+					W2R.getOrigin().y()<<", "<<
+					W2R.getOrigin().z()<<")"<<std::endl;*/
+	//Comprobamos que está en el campo de visión (57º)
+
+	tf::Matrix3x3 w2r(W2R.getRotation());
+	double roll, pitch, yaw;
+	w2r.getRPY(roll, pitch, yaw);
+
+	float angle2obs = atan2(O2R.inverse().getOrigin().y(),
+			O2R.inverse().getOrigin().x());
+	float dista2obs = sqrt(
+			O2R.inverse().getOrigin().y() * O2R.inverse().getOrigin().y()
+					+ O2R.inverse().getOrigin().x()
+							* O2R.inverse().getOrigin().x());
+
+	if (fabs(angle2obs) > (57.0 * M_PI / 180.0))
 		return;
 
-	for (int i = 0; i < NUMPARTICLES; i++) {
-		tf::Transform part, parttf;
+	//std::cerr<<"O"<<std::endl;
 
-		part.setOrigin(
+	tf::StampedTransform L2W;
+	try {
+		tfL.lookupTransform("world", real,
+				ros::Time::now() - ros::Duration(0.2), L2W);
+	} catch (tf::TransformException & ex) {
+		ROS_WARN("%s", ex.what());
+	}
+
+	static int c = 0;
+	double mayor = 0.1;
+
+	for (int i = 0; i < NUMPARTICLES; i++) {
+		tf::Transform W2H, L2H;
+
+		W2H.setOrigin(
 				tf::Vector3(particles[i].coord.position.x,
 						particles[i].coord.position.y,
 						particles[i].coord.position.z));
-		part.setRotation(
+		W2H.setRotation(
 				tf::Quaternion(particles[i].coord.orientation.x,
 						particles[i].coord.orientation.y,
 						particles[i].coord.orientation.z,
 						particles[i].coord.orientation.w));
 
-		tf::Transform noise = genNoise(desp);
+		L2H = L2W.inverse() * W2H;
 
-		parttf = part * desp * noise;
+		tf::Matrix3x3 w2r(L2H.getRotation());
+		double roll, pitch, yaw;
+		w2r.getRPY(roll, pitch, yaw);
 
-		particles[i].coord.position.x = parttf.getOrigin().getX();
-		particles[i].coord.position.y = parttf.getOrigin().getY();
-		particles[i].coord.position.z = parttf.getOrigin().getZ();
-		particles[i].coord.orientation.x = parttf.getRotation().getX();
-		particles[i].coord.orientation.y = parttf.getRotation().getY();
-		particles[i].coord.orientation.z = parttf.getRotation().getZ();
-		particles[i].coord.orientation.w = parttf.getRotation().getW();
+		float x, y;
+
+		x = L2H.getOrigin().x() * cos(-yaw) - L2H.getOrigin().y() * sin(-yaw); //Porque es la vista desde la baliza al robot
+		y = L2H.getOrigin().x() * sin(-yaw) + L2H.getOrigin().y() * cos(-yaw);
+//std::cerr<<"x = ("<<x<<") y: ("<<y<<")"<<std::endl;
+		float angle2ideal = normalizePi(atan2(y, x) + M_PI);
+		float dista2ideal = sqrt(x * x + y * y);
+
+		float desvDist = 0.2; //20 cms
+		float desvAngl = 0.1; //0.1
+//std::cerr<<"Posiciones = ("<<dista2obs<<", "<<dista2ideal<<")"<<" angulos: ("<<angle2obs<<", "<<angle2ideal<<")"<<std::endl;
+		float probdist = getProbPos(dista2ideal, dista2obs, desvDist);
+		float probrota = getProbRot(angle2ideal, angle2obs, desvAngl);
+//std::cerr<<"Probdist = ("<<probdist<<") probrota: ("<<probrota<<")"<<std::endl;
+		particles[i].p = particles[i].p + (probdist * probrota);
+
+		if (particles[i].p < 0.0000001)
+			particles[i].p = 0.0000001;
 
 	}
-
-	std_msgs::Empty rmsg;
-	resetodom_pub.publish(rmsg);
-}
-
-void MCL::setParticle(Particle &particle, float x, float y, float theta)
-{
-
-	particle.coord.position.x = x;
-	particle.coord.position.y = y;
-	particle.coord.position.z = 0.0;
-
-	tf::Quaternion q;
-	q.setEuler(0.0, 0.0, theta);
-
-	particle.coord.orientation.x = q.x();
-	particle.coord.orientation.y = q.y();
-	particle.coord.orientation.z = q.z();
-	particle.coord.orientation.w = q.w();
-
-}
-
-void MCL::correct() {
-
-	if (robotcam.size() == 0)
-		return;
-
-	if(!kdtree_inited)
-	{
-		ROS_ERROR("No input clouds. Is map_node running?");
-		return;
-	}
-
-	//sdt::cerr<<"================================================================="<<std::endl;
-
-	//setParticle(particles[0], 0.0, 0.0, M_PI);
-	//setParticle(particles[0], 0.0, 0.0, 0.0);
-	/*setParticle(particles[0], 0.0, 0.0, M_PI);
-	setParticle(particles[1], 0.0, 0.0, M_PI);
-	setParticle(particles[2], 0.0, 0.0, M_PI);
-	setParticle(particles[3], 0.0, 0.0, M_PI);
-	setParticle(particles[4], 0.0, 0.0, M_PI);
-*/
-
-	for (int i = 0; i < NUMPARTICLES; i++)
-		updateParticle(particles[i]);
-
-	float sump;
-	for (int i = 0; i < NUMPARTICLES; i++)
-		sump = sump + particles[i].p;
-
-	sump = sump/(float)NUMPARTICLES;
-
-
-	//std::cerr<<"["<<sump<<", "<<RESET_TH<<"]"<<std::endl;
-
-	if(sump<RESET_TH)
-	{
-		//std::cerr<<"+";
-		creset++;
-	}
-	else
-	{
-		//std::cerr<<"-";
-		creset = 0;
-	}
-
-	//std::cerr<<"{"<<creset<<"}";
-
-	if(creset>RESET_COUNT)
-	{
-		//std::cerr<<"RESET"<<std::endl;
-		creset = 0;
-		resetParticles();
-	}
-
-
-
-	normalize();
-	updatePos();
-	reseed();
-
-	publishInfo();
-
-}
-
-void MCL::updateParticle(Particle &part) {
-
-	tf::Transform W2H;
-
-	W2H.setOrigin(
-			tf::Vector3(part.coord.position.x, part.coord.position.y,
-					part.coord.position.z));
-
-	W2H.setRotation(
-			tf::Quaternion(part.coord.orientation.x, part.coord.orientation.y,
-					part.coord.orientation.z, part.coord.orientation.w));
-
-
-	tf::Quaternion q(part.coord.orientation.x, part.coord.orientation.y,
-			part.coord.orientation.z, part.coord.orientation.w);
-
-	double roll, pitch, yaw;
-
-	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-	//sdt::cerr<<"Particle in ("<<part.coord.position.x<<", "<<part.coord.position.y<<", "<<yaw<<"): ";
-
-
-	for (int i = 0; i < PCL_SEARCH_POINTS; i++) {
-		int idx = rand() % robotcam.size();
-
-		pcl::PointXYZRGB testpoint = robotcam[idx];
-
-		tf::Vector3 posc(testpoint.x, testpoint.y, testpoint.z);
-		tf::Vector3 posw;
-
-		posw = W2H * posc;
-
-		//sdt::cerr<<"("<<testpoint.x<<", "<<testpoint.y<<") -> ";
-
-		testpoint.x = posw.getX();
-		testpoint.y = posw.getY();
-		testpoint.z = posw.getZ();
-
-
-		//sdt::cerr<<"("<<testpoint.x<<", "<<testpoint.y<<")"<<std::endl;
-
-
-		part.p = doTestPcl(testpoint);
-
-		if (part.p < 0.00001)
-			part.p = 0.00001;
-	}
-
-}
-
-float MCL::doTestPcl(pcl::PointXYZRGB &searchPoint) {
-
-	float ret = 0.0;
-
-
-	int K = 1;
-	int cpart = 0;
-
-	std::vector<int> pointIdxNKNSearch(K);
-	std::vector<float> pointNKNSquaredDistance(K);
-
-
-	if ( kdtree.nearestKSearch (searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
-	{
-		pcl::PointXYZHSV hsvA, hsvB;
-		float diffH, diffS, diffV;
-
-		diffH = 0.0;
-		diffS = 0.0;
-		diffV = 0.0;
-
-		for (size_t i = 0; i < pointIdxNKNSearch.size (); ++i)
-		{
-			if(sqrt(pointNKNSquaredDistance[i]) < PCL_SEARCH_RADIUS)
-			{
-
-				PointXYZRGBtoXYZHSV(searchPoint, hsvA);
-
-				PointXYZRGBtoXYZHSV((*map)->points[pointIdxNKNSearch[i]], hsvB);
-
-				//sdt::cerr<<"\t("<<hsvA.h<<", "<<hsvA.s<<", "<<hsvA.v<<") ";
-				//sdt::cerr<<"("<<hsvB.h<<", "<<hsvB.s<<", "<<hsvB.v<<") ";
-
-				diffH += normalizePi(toRadians(hsvA.h - 180.0) - toRadians(hsvB.h - 180.0));
-				diffS += fabs(hsvA.s - hsvB.s);
-				diffV += fabs(hsvA.v - hsvB.v);
-
-				cpart++;
-			}
-		}
-
-		if(cpart>0)
-		{
-			ret = ret + KO;
-			//sdt::cerr<<"\tTotal: ("<<diffH<<", "<<diffS<<", "<<diffV<<")  -> ";
-
-			diffH = diffH / cpart;
-			diffS = diffS / cpart;
-			diffV = diffV / cpart;
-
-			ret = ret + KH * (fabs(normalizePi(M_PI - diffH)/M_PI)) + KS * (1.0 - diffS) + KV * (1.0 - diffV);
-		}else
-			ret = 0.0;
-
-
-		//sdt::cerr<<"["<<KH * (fabs(normalizePi(M_PI - diffH)/M_PI))<<", "<<KS * (1.0 - diffS) <<", "<< KV * (1.0 - diffV)<<"] = "<<ret<<std::endl;
-	  }
-	/*
-	std::vector<int> pointIdxRadiusSearch;
-	std::vector<float> pointRadiusSquaredDistance;
-
-	float radius = PCL_SEARCH_RADIUS;
-
-	if (kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch,
-			pointRadiusSquaredDistance) > 0) {
-
-		ret = ret + KO;
-
-		pcl::PointXYZHSV hsvA, hsvB;
-
-		PointXYZRGBtoXYZHSV(searchPoint, hsvA);
-
-		float diffH, diffS, diffV;
-
-		diffH = 0.0;
-		diffS = 0.0;
-		diffV = 0.0;
-
-		for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
-			PointXYZRGBtoXYZHSV((*map)->points[pointIdxRadiusSearch[i]], hsvB);
-
-			diffH += normalizePi(
-					toRadians(hsvA.h - 180.0) - toRadians(hsvB.h - 180.0));
-			diffS += fabs(hsvA.s - hsvB.s);
-			diffV += fabs(hsvA.v - hsvB.v);
-		}
-
-		diffH = diffH / (float) pointIdxRadiusSearch.size();
-		diffS = diffH / (float) pointIdxRadiusSearch.size();
-		diffV = diffH / (float) pointIdxRadiusSearch.size();
-
-		ret = ret + KH * (1.0 - diffH) + KS * (1.0 - diffS)
-				+ KV * (1.0 - diffV);
-	}
-	*/
-	return ret;
-
 }
 
 void MCL::reseed() {
@@ -630,7 +455,7 @@ void MCL::reseed() {
 
 	rseedB = (NUMPARTICLES * PERCEN_RANDOM_PARTICLES) / 100;
 	rseedA = NUMPARTICLES - rseedB;
-
+//std::cerr<<"rseedB = ("<<rseedB<<") rseedA: ("<<rseedA<<")"<<std::endl;
 	for (int i = 0; i < rseedA; i++) {
 		float x, y;
 		do {
@@ -687,9 +512,31 @@ void MCL::reseed() {
 
 }
 
+float MCL::getProbPos(float ideal, float obs, float desv) {
+	float dist;
+	dist = fabs(ideal - obs);
+
+	boost::math::normal_distribution<> myNormal(0.0, desv);
+
+	return pdf(myNormal, dist);
+
+}
+
+float MCL::getProbRot(float ideal, float obs, float desv) {
+
+	double diff;
+	diff = normalizePi(ideal - obs);
+
+	boost::math::normal_distribution<> myNormal(0.0, desv);
+
+	return pdf(myNormal, diff);
+
+}
+
 void MCL::printParticles() {
 	for (int i = 0; i < NUMPARTICLES; i++)
 		std::cerr << "[" << i << "] (" << particles[i].coord.position.x << ", "
 				<< particles[i].coord.position.y << ") " << particles[i].p
 				<< std::endl;
 }
+

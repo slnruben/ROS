@@ -81,9 +81,8 @@
 	static const int num_objects = 3;	
 	static const int begin=0;
 	static const int search=1;
-	static const int end=3;
-	static const int rescue=2;
-	static const int MTODETECT=0.68;
+	static const int end=2;
+	static const int rescue=3;
 	std::string emp = "empty";
 
 	struct Object{
@@ -96,7 +95,6 @@
 	struct ball{
 		Object o;
 		bool found;
-		ros::Time time;
 	};
 
 
@@ -104,7 +102,6 @@
 	Object goal;
 	Object center;
 	Object pose1;
-
 
 
 	std::string id;
@@ -210,37 +207,27 @@ go2gpos(Object o)
 {
 	float diffpose;
 
- std::cout<<"x:"<<pose1.cx<<std::endl;
- std::cout<<"y:"<<pose1.cy<<std::endl;	
-// std::cout<<"z:"<<pose.pose.pose.orientation.z<<std::endl;
- //std::cout<<"w:"<<fakepose.pose.pose.orientation.w<<std::endl;	
+// std::cout<<"x:"<<fakepose.pose.pose.position.x<<std::endl;
+// std::cout<<"y:"<<fakepose.pose.pose.position.y<<std::endl;	
+// std::cout<<"z:"<<fakepose.pose.pose.orientation.z<<std::endl;
+// std::cout<<"w:"<<fakepose.pose.pose.orientation.w<<std::endl;	
 
-	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
-	
-	double roll, pitch, yaw;
-	//pose.pose.pose.orientation.z to 1.0
-	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
-	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-
-
-
-	/****************************************FAKE************************
-	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
-	
-	double roll, pitch, yaw;
-	//pose.pose.pose.orientation.z to 1.0
-	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
-	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
-
-
-	diffpose = sqrt( (fakepose.pose.pose.position.x-o.cx)*(fakepose.pose.pose.position.x-o.cx)+ (fakepose.pose.pose.position.y-o.cy)*(fakepose.pose.pose.position.y-o.cy)); 
+	/*diffpose = sqrt( (fakepose.pose.pose.position.x-o.cx)*(fakepose.pose.pose.position.x-o.cx)+ (fakepose.pose.pose.position.y-o.cy)*(fakepose.pose.pose.position.y-o.cy)); 
 	
 	double roll, pitch, yaw;
 
 	tf::Quaternion q(fakepose.pose.pose.orientation.x, fakepose.pose.pose.orientation.y, fakepose.pose.pose.orientation.z, fakepose.pose.pose.orientation.w);
-	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);*/
 
-	****************************************FAKE************************/
+
+	
+	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
+	
+	double roll, pitch, yaw;
+	//pose.pose.pose.orientation.z to 1.0
+	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
+	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+	
 				
 	float v,w;
 	float angle2goal;
@@ -248,12 +235,11 @@ go2gpos(Object o)
 		w = v = 0.0;
 	}else{
 
-		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
+		//angle2goal = normalizePi(atan2(o.cy - fakepose.pose.pose.position.y, o.cx -fakepose.pose.pose.position.x) - yaw);
 	
-		/****************************************FAKE************************
-		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
-		angle2goal = normalizePi(atan2(o.cy - fakepose.pose.pose.position.y, o.cx -fakepose.pose.pose.position.x) - yaw);	
-	****************************************FAKE************************/
+
+		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);	
+
 
 
 		if(fabs(angle2goal) > 0.1)
@@ -291,11 +277,11 @@ go2pos(Object o)
 {
 	float v,w;
 	float a=o.cy;
-	if(o.cy >0.7){
+	if(o.cy >1){
 		w=-0.3;
-	}else if(o.cy >0.1){
+	}else if(o.cy >0.2){
 		w=-0.1*a;
-	}else if(o.cy <0.1){
+	}else if(o.cy <0.2){
 		w=0.1*a;
 	}else if(o.cy <1){
 		w=0.3;
@@ -345,10 +331,8 @@ ball getTarget(){
  	}
 void
 peep(){
-
-		sound_cmd.value = 6;
+		sound_cmd.value = 3;
 		cmdpub_s.publish(sound_cmd);
-
 }
 
 bool hayTarget() {
@@ -369,34 +353,48 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 	return s1.compare(s2.substr(0, s1.length()))==0;
 
 }
-
-void borrarpelotas(ball b){
-	if(b.time >= ros::Time::now() - ros::Duration(1.0) and b.found==false){
-		  b.o.name="empty";
-		  state=0;
-	}
-}
-
+/////
 void lost() {
 
+
+
+////////////////////////////////////////////arreglar
 	geometry_msgs::Twist cmd;
+	bool bin=true;
 
-	if((fabs(pose1.cx)>2.0 or fabs(pose1.cy)>2.0)){
+	if((fabs(pose1.cx)>1.0 or fabs(pose1.cy)>1.0) and bin==true){
 		go2gpos(center);
-	}else if(fabs(pose1.cx)>0.4 or fabs(pose1.cy)>0.4){
+		bin=true;
+	}else if(fabs(pose1.cx)>0.5 or fabs(pose1.cy)>0.5){
+		bin =true;
+	}else if(fabs(pose1.cx)<0.5 or fabs(pose1.cy)<0.5){
 
-	}else if(fabs(pose1.cx)<0.4 or fabs(pose1.cy)<0.4){
 	
 	cmd.linear.x = 0.3;
 	cmd.linear.y = 0.0;
 	cmd.linear.z = 0.0;
 	cmd.angular.x = 0.0;
 	cmd.angular.y = 0.0;
-	cmd.angular.z = 0.5;
+	cmd.angular.z = 0.4;
 
 	
 	cmdpub_t.publish(cmd);
+	bin=false;
+	}else if(bin==true){
+		go2gpos(center);
+	}else if(bin==false){
+		cmd.linear.x = 0.3;
+		cmd.linear.y = 0.0;
+		cmd.linear.z = 0.0;
+		cmd.angular.x = 0.0;
+		cmd.angular.y = 0.0;
+		cmd.angular.z = 0.4;
+
+		
+		cmdpub_t.publish(cmd);
 	}
+
+
 }
 
 bool terminado() {
@@ -461,7 +459,6 @@ int main(int argc, char **argv)
 	    array[i].o.cy = 0.0;
 	    array[i].o.cz = 0.0;
 	    array[i].found = true;
-	    array[i].time = ros::Time::now();	
 	}	
 
 	 goal.name="Goal";
@@ -476,14 +473,6 @@ int main(int argc, char **argv)
  	 state = 0;   
 
  	 ball target;
- 	 ball prueba;
- 	 Object p_ball;
- 	p_ball.name="pelota";
-	p_ball.cx=2.0;
-	p_ball.cy=-0.2;
-	p_ball.cz=0.0;
-	prueba.o=p_ball;
-	prueba.found=false;
 	/////////////////////////////////////////////////
 	
 	while (ros::ok())
@@ -503,52 +492,40 @@ int main(int argc, char **argv)
 
 		for (it = balls.begin(); it != balls.end(); ++it) {
 			ball_in_balls = false;
-	
 
-				for (int i = 0; i < num_objects; ++i){ 
-					if(array[i].o.name.compare(*it)==0 and ball_in_balls==false){
-						ball_in_balls  = true;
-						f_balls=i;
-					}	
-				}
-
-
-			try {
+			try {	
 					//cambio de tf 
-				tfL.lookupTransform("base_link", *it, //poner inverse si sale negativo
+				tfL.lookupTransform("world", *it, //poner inverse si sale negativo
 					ros::Time::now() - ros::Duration(0.2), L2W);
+
 				  for (int i = 0; i < num_objects; ++i){ 
-				  	//bola nueva 
-					if(array[i].o.name.compare("empty")==0 and ball_in_balls==false){ //comprobar length
-				   std::cout<<"???????????????????NUEVA?????????????????"<<std::endl;
+				  	//actualiza pos 
+					if(array[i].o.name.compare(*it)!=0){ //comprobar length
+				  		if(array[f_balls].found==false){
+						    array[f_balls].o.cx = L2W.getOrigin().x();	
+						    array[f_balls].o.cy = L2W.getOrigin().y();
+						    array[f_balls].o.cz = L2W.getOrigin().z();
+						    ball_in_balls= true;
+				  		}
+				  	//mete bola nueva
+				  	}else if(array[i].o.name.compare(*it)!=0 and ball_in_balls==false){ 
 				  			array[f_balls].o.name = *it;
 						    array[f_balls].o.cx = L2W.getOrigin().x();	
 						    array[f_balls].o.cy = L2W.getOrigin().y();
 						    array[f_balls].o.cz = L2W.getOrigin().z();
 						    array[f_balls].found = false;
-	    					    array[i].time = ros::Time::now();
-						  
-
-				  	//actualiza
-				  	}else if(array[i].o.name.compare(*it)==0){ 
-		   std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!actualiza!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-				  		if(array[f_balls].found==false){
-						    array[f_balls].o.cx = L2W.getOrigin().x();	
-						    array[f_balls].o.cy = L2W.getOrigin().y();
-						    array[f_balls].o.cz = L2W.getOrigin().z();
-						    array[i].time = ros::Time::now();
-				  		}
+						    ball_in_balls= true;
  					}
 				  }
 
 
 			} catch (tf::TransformException & ex) {
-				//ROS_WARN("%s", ex.what());
+				ROS_WARN("%s", ex.what());
 			}
 		}
-		 for (int i = 0; i < num_objects; ++i){ 
-		   std::cout<<"bolas:"<<array[i].o.name<<std::endl;
-		 }
+		// for (int i = 0; i < num_objects; ++i){ 
+		//   std::cout<<"bolas:"<<array[i].o.name<<std::endl;
+		// }
 
 	 	switch (state){
 		     case begin:
@@ -567,29 +544,12 @@ int main(int argc, char **argv)
 		     case search:
 		     	std::cout<<"search:"<<std::endl;
 		     	target = getTarget();
-		     	//target = prueba;
-				go2pos(target.o);
-				/*
-				if(pose1.cx >target.o.cx-0.25 and pose1.cx <target.o.cx+0.25){
+				go2gpos(target.o);
+				if(target.o.cx<0.5){
 					target.found=true;
 					peep();
 					state= rescue;
-				}*/	
-				std::cout<<"x:"<<target.o.cx<<std::endl;
-				std::cout<<"y:"<<target.o.cy<<std::endl;
-
-				if(target.o.cx< MTODETECT){
-					target.found=true;
-					peep();
-					state= rescue;
-				}
-//comprobar tiempo
-				borrarpelotas(target);
-
-
-
-
-				
+				}					
 				break;
 			 case rescue:
 			 		std::cout<<"rescue:"<<std::endl;
@@ -599,7 +559,6 @@ int main(int argc, char **argv)
 	// std::cout<<"POS = y:"<<pose1.cy<<std::endl;	
 
 			 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
-			 		peep();
 				 	if(hayTarget())
 						state = search;
 					else{
