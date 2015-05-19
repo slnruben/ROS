@@ -204,6 +204,60 @@ void fakeposeCB(const gazebo_msgs::ModelStates &states)
 	}
 }
 
+int
+go2goal(Object o)	
+{
+	float diffpose;
+
+ std::cout<<"x:"<<pose1.cx<<std::endl;
+ std::cout<<"y:"<<pose1.cy<<std::endl;	
+	
+
+	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
+	
+	double roll, pitch, yaw;
+	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
+	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+
+
+				
+	float v,w;
+	float angle2goal;
+	if(diffpose < 0.1){	
+		w = v = 0.0;
+	}else{
+		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
+
+
+		if(fabs(angle2goal) > 0.1)
+		{
+			w = (angle2goal/fabs(angle2goal)) * 0.5;
+			v = 0.0;
+		}else{
+			w = 0.0;
+			v = 0.35;
+		}
+	}
+
+	geometry_msgs::Twist cmd;
+	
+	cmd.linear.x = v;
+	cmd.linear.y = 0.0;
+	cmd.linear.z = 0.0;
+	cmd.angular.x = 0.0;
+	cmd.angular.y = 0.0;
+	cmd.angular.z = w;
+
+
+
+	std::cout<<"diffpose:"<<diffpose<<std::endl;
+	std::cout<<"angle:"<<angle2goal<<std::endl;
+
+	std::cout<<"v:"<<v<<std::endl;
+	std::cout<<"w:"<<w<<std::endl;	
+	cmdpub_t.publish(cmd);
+}
 
 void
 go2gpos(Object o)	
@@ -429,7 +483,7 @@ states:
 	tf->3coor 1 string(roja grande)
 */
 
-
+int i = 0;
 int main(int argc, char **argv)
 {
 
@@ -615,6 +669,32 @@ k++;
 			 	}
 			 	break;
 			 case end:	
+	
+				geometry_msgs::Twist cmd;
+	
+					cmd.linear.x = 0.0;
+					cmd.linear.y = 0.0;
+					cmd.linear.z = 0.0;
+					cmd.angular.x = 0.0;
+					cmd.angular.y = 0.0;
+					cmd.angular.z = 0.7;
+
+
+
+					//std::cout<<"diffpose:"<<diffpose<<std::endl;
+					//std::cout<<"angle:"<<angle2goal<<std::endl;
+
+					//std::cout<<"v:"<<v<<std::endl;
+					//std::cout<<"w:"<<w<<std::endl;
+	
+					
+				if(i < 133){
+					cmdpub_t.publish(cmd);
+					ROS_INFO("iteracion: %d",  i);
+					i++;
+				}
+
+
 			 break;
 		}
 		ros::spinOnce();
