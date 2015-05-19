@@ -426,8 +426,12 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 
 void borrarpelotas(ball b){
 	if(b.time >= ros::Time::now() - ros::Duration(1.0) and b.found==false){
-		  b.o.name="empty";
-		  //state=0;
+
+		for (int i = 0; i < num_objects; ++i){ 
+			if(array[i].o.name.compare(b.o.name)==0){
+				array[i].o.name="empty";
+			}	
+		}
 	}
 }
 
@@ -627,12 +631,7 @@ k++;
 		     	target = getTarget();
 		     	//target = prueba;
 				go2pos(target.o);
-				/*
-				if(pose1.cx >target.o.cx-0.25 and pose1.cx <target.o.cx+0.25){
-					target.found=true;
-					peep();
-					state= rescue;
-				}*/	
+
 				std::cout<<"x:"<<target.o.cx<<std::endl;
 				std::cout<<"y:"<<target.o.cy<<std::endl;
 
@@ -641,7 +640,6 @@ k++;
 					peep();
 					state= rescue;
 				}
-//comprobar tiempo
 				borrarpelotas(target);
 
 
