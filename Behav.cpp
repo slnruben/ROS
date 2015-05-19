@@ -450,7 +450,7 @@ void lost() {
 	cmd.linear.z = 0.0;
 	cmd.angular.x = 0.0;
 	cmd.angular.y = 0.0;
-	cmd.angular.z = 0.5;
+	cmd.angular.z = 0.6;
 
 	
 	cmdpub_t.publish(cmd);
