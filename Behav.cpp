@@ -642,7 +642,14 @@ k++;
 				}
 				borrarpelotas(target);
 
-
+				if(hayTarget())
+					state = search;
+				else{
+					if(terminado())
+						state= end;
+					else
+						state=begin;
+				}
 
 
 				
