@@ -346,13 +346,13 @@ go2pos(Object o)
 	float v,w;
 	float a=o.cy;
 	if(o.cy >0.7){
-		w=-0.3;
+		w=0.4;
 	}else if(o.cy >0.1){
-		w=-0.1*a;
-	}else if(o.cy <0.1){
-		w=0.1*a;
-	}else if(o.cy <1){
 		w=0.3;
+	}else if(o.cy <-0.1){
+		w=-0.3;
+	}else if(o.cy <-0.7){
+		w=-0.4;
 	}else{
 		w=0.0;
 	}
@@ -374,7 +374,8 @@ go2pos(Object o)
 	cmd.angular.y = 0.0;
 	cmd.angular.z = w;
 
-	
+	std::cout<<"v:"<<v<<std::endl;
+	std::cout<<"w:"<<w<<std::endl;	
 	cmdpub_t.publish(cmd);
 }
 
@@ -410,7 +411,7 @@ bool hayTarget() {
 	bool hay=false;
 	while(i<num_objects){
 		if (array[i].o.name.compare(emp)!= 0){
-			if(array[i].found==false)	//poner a false cuando encuentro bolas
+			if(array[i].found==false)
 				hay =true;
 		}
 		i++;
@@ -424,8 +425,14 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 
 }
 
+
 void borrarpelotas(ball b){
-	if(b.time >= ros::Time::now() - ros::Duration(1.0) and b.found==false){
+
+   //std::cout<<"b time:"<<b.time<<std::endl;
+   //std::cout<<"time - x:"<<ros::Time::now() - ros::Duration(2.0)<<std::endl;
+
+
+	if(b.time <= ros::Time::now() - ros::Duration(1.0) and b.found==false){
 
 		for (int i = 0; i < num_objects; ++i){ 
 			if(array[i].o.name.compare(b.o.name)==0){
@@ -561,7 +568,7 @@ int main(int argc, char **argv)
 int k = 0;
 		for (it = balls.begin(); it != balls.end(); ++it) {
 	   ROS_INFO("it %d", k);
-		   std::cout<<"it:"<<*it<<std::endl;
+	
 k++;
 			ball_in_balls = false;
 	
@@ -578,7 +585,7 @@ k++;
 				tfL.lookupTransform("base_link", *it, //poner inverse si sale negativo
 					ros::Time::now() - ros::Duration(0.2), L2W);
 				  for (int i = 0; i < num_objects; ++i){ 
-		   std::cout<<"i: "<<i<<std::endl;
+		  // std::cout<<"i: "<<i<<std::endl;
 				  	//bola nueva 
 					if(array[i].o.name.compare("empty")==0 and ball_in_balls==false){ //comprobar length
 				   std::cout<<"???????????????????NUEVA?????????????????"<<std::endl;
@@ -610,11 +617,12 @@ k++;
 		}
 		 for (int i = 0; i < num_objects; ++i){ 
 		   std::cout<<"bolas:"<<array[i].o.name<<std::endl;
+			std::cout<<"found:"<<array[i].found<<std::endl;
 		 }
 
 	 	switch (state){
 		     case begin:
-		     			 		std::cout<<"begin:"<<std::endl;
+		     			 		std::cout<<"BEGIN:"<<std::endl;
 		     	lost();
 
 				if(hayTarget())
@@ -627,7 +635,7 @@ k++;
 				}
 			 	break;
 		     case search:
-		     	std::cout<<"search:"<<std::endl;
+		     	std::cout<<"SEARCH:"<<std::endl;
 		     	target = getTarget();
 		     	//target = prueba;
 				go2pos(target.o);
@@ -636,9 +644,14 @@ k++;
 				std::cout<<"y:"<<target.o.cy<<std::endl;
 
 				if(target.o.cx< 0.68){
-					target.found=true;
+					for (int i = 0; i < num_objects; ++i){ 
+						if(array[i].o.name.compare(target.o.name)==0){
+							array[i].found=true;
+						}	
+					}
 					peep();
 					state= rescue;
+					break;
 				}
 				borrarpelotas(target);
 
@@ -655,7 +668,7 @@ k++;
 				
 				break;
 			 case rescue:
-			 		std::cout<<"rescue:"<<std::endl;
+			 		std::cout<<"RESCUE:"<<std::endl;
 			 	go2gpos(goal);
 
 	// std::cout<<"POS = x:"<<pose1.cx<<std::endl;
