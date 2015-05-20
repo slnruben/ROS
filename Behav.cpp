@@ -39,7 +39,8 @@
 //---------------------------------------------quitar si .h --------------------------------
 // Behav::Behav() {
 
-
+// 133 1 vuelta 37 1 m
+		//
 // 	//generator.seed(time(NULL));
 // 	//distribution = new std::normal_distribution<float>(0.0, 0.1);
 
@@ -81,8 +82,9 @@
 	static const int num_objects = 3;	
 	static const int begin=0;
 	static const int search=1;
-	static const int end=3;
 	static const int rescue=2;
+	static const int girydist=3;
+	static const int end=4;
 	static const int MTODETECT=0.68;
 	std::string emp = "empty";
 
@@ -205,9 +207,10 @@ void fakeposeCB(const gazebo_msgs::ModelStates &states)
 }
 
 int
-go2goal(Object o)	
+gira(Object o)	
 {
 	float diffpose;
+	int niter=0;
 
  std::cout<<"x:"<<pose1.cx<<std::endl;
  std::cout<<"y:"<<pose1.cy<<std::endl;	
@@ -215,6 +218,71 @@ go2goal(Object o)
 
 	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
 	
+
+	double roll, pitch, yaw;
+	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
+	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+
+				
+	float v,w;
+	float angle2goal;
+	if(diffpose < 0.1){	
+		w = v = 0.0;
+		niter=0;
+	}else{
+		//va de 3.1/-3.1 a 0
+		// 133 1 vuelta 37 1 m
+
+		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
+
+		//70 seria lo q tarda en dar media vuelta +o-
+		niter = niter +  70*angle2goal/3.1;
+
+		if(fabs(angle2goal) > 0.08)
+		{
+			w = (angle2goal/fabs(angle2goal)) * 0.5;
+			v = 0.0;
+		}else{
+			w = v = 0.0;
+			niter=0;
+		}
+	}
+
+	geometry_msgs::Twist cmd;
+	
+	cmd.linear.x = v;
+	cmd.linear.y = 0.0;
+	cmd.linear.z = 0.0;
+	cmd.angular.x = 0.0;
+	cmd.angular.y = 0.0;
+	cmd.angular.z = w;
+
+
+
+	std::cout<<"diffpose:"<<diffpose<<std::endl;
+	std::cout<<"angle:"<<angle2goal<<std::endl;
+
+	std::cout<<"v:"<<v<<std::endl;
+	std::cout<<"w:"<<w<<std::endl;	
+	cmdpub_t.publish(cmd);
+	return niter;
+}
+
+int
+go2goal(Object o)	
+{
+	float diffpose;
+	int niter=0;
+
+ std::cout<<"x:"<<pose1.cx<<std::endl;
+ std::cout<<"y:"<<pose1.cy<<std::endl;	
+	
+
+	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
+	
+	niter = diffpose * 37;
+
 	double roll, pitch, yaw;
 	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
 	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
@@ -227,8 +295,10 @@ go2goal(Object o)
 	if(diffpose < 0.1){	
 		w = v = 0.0;
 	}else{
-		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
+		//va de 3.1/-3.1 a 0
+		// 133 1 vuelta 37 1 m
 
+		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
 
 		if(fabs(angle2goal) > 0.1)
 		{
@@ -257,8 +327,8 @@ go2goal(Object o)
 	std::cout<<"v:"<<v<<std::endl;
 	std::cout<<"w:"<<w<<std::endl;	
 	cmdpub_t.publish(cmd);
+	return niter;
 }
-
 void
 go2gpos(Object o)	
 {
@@ -269,11 +339,13 @@ go2gpos(Object o)
 // std::cout<<"z:"<<pose.pose.pose.orientation.z<<std::endl;
  //std::cout<<"w:"<<fakepose.pose.pose.orientation.w<<std::endl;	
 
-	diffpose = sqrt( (pose.pose.pose.position.x-o.cx)*(pose.pose.pose.position.x-o.cx)+ (pose.pose.pose.position.y-o.cy)*(pose.pose.pose.position.y-o.cy)); 
+
+
+	diffpose = sqrt( (fakepose.pose.pose.position.x-o.cx)*(fakepose.pose.pose.position.x-o.cx)+ (fakepose.pose.pose.position.y-o.cy)*(fakepose.pose.pose.position.y-o.cy)); 
 	
 	double roll, pitch, yaw;
-	//pose.pose.pose.orientation.z to 1.0
-	tf::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z, 1.0);
+
+	tf::Quaternion q(fakepose.pose.pose.orientation.x, fakepose.pose.pose.orientation.y, fakepose.pose.pose.orientation.z, fakepose.pose.pose.orientation.w);
 	tf::Matrix3x3(q).getRPY(roll, pitch, yaw);
 
 
@@ -302,7 +374,7 @@ go2gpos(Object o)
 		w = v = 0.0;
 	}else{
 
-		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
+		angle2goal = normalizePi(atan2(o.cy - fakepose.pose.pose.position.y, o.cx -fakepose.pose.pose.position.x) - yaw);	
 	
 		/****************************************FAKE************************
 		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
@@ -346,13 +418,13 @@ go2pos(Object o)
 	float v,w;
 	float a=o.cy;
 	if(o.cy >0.7){
-		w=0.4;
-	}else if(o.cy >0.1){
-		w=0.3;
-	}else if(o.cy <-0.1){
 		w=-0.3;
-	}else if(o.cy <-0.7){
-		w=-0.4;
+	}else if(o.cy >0.1){
+		w=-0.1*a;
+	}else if(o.cy <0.1){
+		w=0.1*a;
+	}else if(o.cy <1){
+		w=0.3;
 	}else{
 		w=0.0;
 	}
@@ -374,8 +446,7 @@ go2pos(Object o)
 	cmd.angular.y = 0.0;
 	cmd.angular.z = w;
 
-	std::cout<<"v:"<<v<<std::endl;
-	std::cout<<"w:"<<w<<std::endl;	
+	
 	cmdpub_t.publish(cmd);
 }
 
@@ -411,7 +482,7 @@ bool hayTarget() {
 	bool hay=false;
 	while(i<num_objects){
 		if (array[i].o.name.compare(emp)!= 0){
-			if(array[i].found==false)
+			if(array[i].found==false)	//poner a false cuando encuentro bolas
 				hay =true;
 		}
 		i++;
@@ -425,14 +496,8 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 
 }
 
-
 void borrarpelotas(ball b){
-
-   //std::cout<<"b time:"<<b.time<<std::endl;
-   //std::cout<<"time - x:"<<ros::Time::now() - ros::Duration(2.0)<<std::endl;
-
-
-	if(b.time <= ros::Time::now() - ros::Duration(1.0) and b.found==false){
+	if(b.time >= ros::Time::now() - ros::Duration(1.0) and b.found==false){
 
 		for (int i = 0; i < num_objects; ++i){ 
 			if(array[i].o.name.compare(b.o.name)==0){
@@ -537,7 +602,7 @@ int main(int argc, char **argv)
 	 center.cy=0.0;
 	 center.cz=0.0;
 
- 	 state = 0;   
+ 	 state = 2;   
 
  	 ball target;
  	 ball prueba;
@@ -548,6 +613,10 @@ int main(int argc, char **argv)
 	p_ball.cz=0.0;
 	prueba.o=p_ball;
 	prueba.found=false;
+
+
+	int niter;
+	int iter=0;
 	/////////////////////////////////////////////////
 	
 	while (ros::ok())
@@ -568,7 +637,7 @@ int main(int argc, char **argv)
 int k = 0;
 		for (it = balls.begin(); it != balls.end(); ++it) {
 	   ROS_INFO("it %d", k);
-	
+		   std::cout<<"it:"<<*it<<std::endl;
 k++;
 			ball_in_balls = false;
 	
@@ -585,7 +654,7 @@ k++;
 				tfL.lookupTransform("base_link", *it, //poner inverse si sale negativo
 					ros::Time::now() - ros::Duration(0.2), L2W);
 				  for (int i = 0; i < num_objects; ++i){ 
-		  // std::cout<<"i: "<<i<<std::endl;
+		   std::cout<<"i: "<<i<<std::endl;
 				  	//bola nueva 
 					if(array[i].o.name.compare("empty")==0 and ball_in_balls==false){ //comprobar length
 				   std::cout<<"???????????????????NUEVA?????????????????"<<std::endl;
@@ -617,17 +686,17 @@ k++;
 		}
 		 for (int i = 0; i < num_objects; ++i){ 
 		   std::cout<<"bolas:"<<array[i].o.name<<std::endl;
-			std::cout<<"found:"<<array[i].found<<std::endl;
 		 }
 
 	 	switch (state){
 		     case begin:
-		     			 		std::cout<<"BEGIN:"<<std::endl;
+		     			 		std::cout<<"begin:"<<std::endl;
 		     	lost();
 
-				if(hayTarget())
+				if(hayTarget()){
+					iter=0;
 					state = search;
-				else{
+				}else{
 					if(terminado())
 						state= end;
 					else
@@ -635,7 +704,7 @@ k++;
 				}
 			 	break;
 		     case search:
-		     	std::cout<<"SEARCH:"<<std::endl;
+		     	std::cout<<"search:"<<std::endl;
 		     	target = getTarget();
 		     	//target = prueba;
 				go2pos(target.o);
@@ -644,20 +713,16 @@ k++;
 				std::cout<<"y:"<<target.o.cy<<std::endl;
 
 				if(target.o.cx< 0.68){
-					for (int i = 0; i < num_objects; ++i){ 
-						if(array[i].o.name.compare(target.o.name)==0){
-							array[i].found=true;
-						}	
-					}
+					target.found=true;
 					peep();
 					state= rescue;
-					break;
 				}
 				borrarpelotas(target);
 
-				if(hayTarget())
+				if(hayTarget()){
+					iter=0;
 					state = search;
-				else{
+				}else{
 					if(terminado())
 						state= end;
 					else
@@ -667,15 +732,28 @@ k++;
 
 				
 				break;
+			 case girydist:
+			 	std::cout<<"GIRYDIST"<<std::endl;
+			 	int ready;
+			 	ready = gira(goal);
+			 	if(ready==0)
+			 	state = rescue;
+
+			 
 			 case rescue:
 			 		std::cout<<"RESCUE:"<<std::endl;
-			 	go2gpos(goal);
-
+			 	if (iter==0){
+			 		niter=go2goal(goal);
+			 	}else{
+			 		go2goal(goal);
+			 	}
 	// std::cout<<"POS = x:"<<pose1.cx<<std::endl;
 	// std::cout<<"POS = y:"<<pose1.cy<<std::endl;	
 
-			 	if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
+			 	//if (goal.cx<pose1.cx+0.25 and goal.cx>pose1.cx-0.25 and goal.cy>pose1.cy-0.25 and goal.cy<pose1.cy+0.25){
+			 	if (iter>=niter){
 			 		peep();
+			 		iter=0;
 				 	if(hayTarget())
 						state = search;
 					else{
@@ -685,6 +763,7 @@ k++;
 							state=begin;
 					}
 			 	}
+			 	iter++;
 			 	break;
 			 case end:	
 	
