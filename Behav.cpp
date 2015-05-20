@@ -237,7 +237,8 @@ gira(Object o)
 		angle2goal = normalizePi(atan2(o.cy - pose.pose.pose.position.y, o.cx -pose.pose.pose.position.x) - yaw);
 
 		//70 seria lo q tarda en dar media vuelta +o-
-		niter = niter +  70*angle2goal/3.1;
+		//niter = niter +  70*angle2goal/3.1;
+		niter = 7;
 
 		if(fabs(angle2goal) > 0.08)
 		{
@@ -302,7 +303,8 @@ go2goal(Object o)
 
 		if(fabs(angle2goal) > 0.1)
 		{
-			w = (angle2goal/fabs(angle2goal)) * 0.5;
+	 std::cout<<"el angulo deberia ser menos a 0.1 wtf"<<std::endl;	
+			w = 0.0;
 			v = 0.0;
 		}else{
 			w = 0.0;
@@ -497,7 +499,7 @@ bool isPrefix(std::string const& s1, std::string const&s2)
 }
 
 void borrarpelotas(ball b){
-	if(b.time >= ros::Time::now() - ros::Duration(1.0) and b.found==false){
+	if(b.time <= ros::Time::now() - ros::Duration(1.0) and b.found==false){
 
 		for (int i = 0; i < num_objects; ++i){ 
 			if(array[i].o.name.compare(b.o.name)==0){
@@ -602,7 +604,7 @@ int main(int argc, char **argv)
 	 center.cy=0.0;
 	 center.cz=0.0;
 
- 	 state = 2;   
+ 	 state = 0;   
 
  	 ball target;
  	 ball prueba;
@@ -694,7 +696,7 @@ k++;
 		     	lost();
 
 				if(hayTarget()){
-					iter=0;
+
 					state = search;
 				}else{
 					if(terminado())
@@ -713,14 +715,15 @@ k++;
 				std::cout<<"y:"<<target.o.cy<<std::endl;
 
 				if(target.o.cx< 0.68){
+			 	std::cout<<"GIRYDIST4567845674857564747574939485756483934"<<std::endl;
 					target.found=true;
 					peep();
-					state= rescue;
+					state= girydist;
+					break;
 				}
 				borrarpelotas(target);
 
 				if(hayTarget()){
-					iter=0;
 					state = search;
 				}else{
 					if(terminado())
@@ -734,11 +737,14 @@ k++;
 				break;
 			 case girydist:
 			 	std::cout<<"GIRYDIST"<<std::endl;
+					iter=0;
 			 	int ready;
 			 	ready = gira(goal);
-			 	if(ready==0)
-			 	state = rescue;
-
+	std::cout<<"ready:"<<ready<<std::endl;
+				if(ready==0){
+			 		state = rescue;
+				}
+				break;
 			 
 			 case rescue:
 			 		std::cout<<"RESCUE:"<<std::endl;
