@@ -20,35 +20,35 @@
 		VUBIGORANGE = 282;
 		VLBIGORANGE = 192;
 	
-		HURED = 127; //360;
-		HLRED = 121; //336;
+		HURED = 360; //360;
+		HLRED = 360; //336;
 		SURED = 260; //275;
 		SLRED = 219; //180;
 		VURED = 276;
 		VLRED = 84;
 	
-		HUBLUE = 228; //265;
-		HLBLUE = 199; //150;
+		HUBLUE = 230; //265;
+		HLBLUE = 197; //150;
 		SUBLUE = 360; 
-		SLBLUE = 275; 
-		VUBLUE = 276;
-		VLBLUE = 188;
+		SLBLUE = 237; 
+		VUBLUE = 338;
+		VLBLUE = 168;
 	
-		HUYELLOW = 72; //149;
+		HUYELLOW = 80; //149;
 		HLYELLOW = 55; //36;
 		SUYELLOW  = 360; 
-		SLYELLOW  = 179; 
-		VUYELLOW  = 281;
+		SLYELLOW  = 171; 
+		VUYELLOW  = 360;
 		VLYELLOW  = 149;
 		
 		HUPINK = 340; //335;
-		HLPINK = 274; //266;
+		HLPINK = 266; //266;
 		SUPINK = 360; 
-		SLPINK = 206; 
-		VUPINK = 281;
-		VLPINK = 149;
+		SLPINK = 203; 
+		VUPINK = 286;
+		VLPINK = 120;
 
-		distpix = 10;
+		distpix = 20;
 		sizemin = 20;
 
 		maxrange = 0.1;
