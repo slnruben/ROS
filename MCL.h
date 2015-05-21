@@ -38,6 +38,7 @@ public:
 
 	void correct();
 	void publishInfo();
+	void predict();
 	geometry_msgs::PoseWithCovarianceStamped getPose();
 
 	void odomCB(const nav_msgs::Odometry::ConstPtr& msg);
@@ -46,12 +47,14 @@ private:
 
 	static const float field_width;
 	static const float field_height;
-	static const int NUMPARTICLES = 100;
-	static const int PERCEN_RANDOM_PARTICLES = 15;
+	static const int NUMPARTICLES = 300;
+	static const int PERCEN_RANDOM_PARTICLES = 20;
+
+	float factor;
 
 	void resetParticles();
 	void updatePos();
-	void reseed();
+	//void reseed();
 	void normalize();
 
 	void resetOdom();
@@ -76,6 +79,7 @@ private:
 	ros::Publisher part_pub;
 	ros::Publisher pose_pub;
 	ros::Subscriber odom_sub;
+	ros::Publisher resetodom_pub;
 	tf::TransformListener tfL;
 	tf::TransformBroadcaster tfB;
 
