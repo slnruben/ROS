@@ -15,13 +15,13 @@ MCL::MCL() {
 	generator.seed(time(NULL));
 
 	resetParticles();
-	normalize();
 	updatePos();
 
 	part_pub = n.advertise<geometry_msgs::PoseArray>("/MCL_particles", 1000);
 	pose_pub = n.advertise<geometry_msgs::PoseStamped>("/MCL_pos", 1000);
 	odom_sub = n.subscribe<nav_msgs::Odometry>("/robot1/odom", 10, &MCL::odomCB,this);
 	seq = 0;
+
 	resetodom_pub = n.advertise<std_msgs::Empty>("/robot/commands/reset_odometry", 1);
 
 	resetOdom();
@@ -44,7 +44,7 @@ void MCL::resetOdom() {
 	odom.pose.pose.orientation.z = q.z();
 	odom.pose.pose.orientation.w = q.w();
 
-	/*last_odom.pose.pose.position.x = 0;
+	last_odom.pose.pose.position.x = 0;
 	last_odom.pose.pose.position.y = 0;
 	last_odom.pose.pose.position.z = 0;
 
@@ -53,7 +53,7 @@ void MCL::resetOdom() {
 	last_odom.pose.pose.orientation.x = ql.x();
 	last_odom.pose.pose.orientation.y = ql.y();
 	last_odom.pose.pose.orientation.z = ql.z();
-	last_odom.pose.pose.orientation.w = ql.w();*/
+	last_odom.pose.pose.orientation.w = ql.w();
 
 }
 
@@ -285,8 +285,6 @@ void MCL::updatePos() {
 
 		st2 = st2 + particles[i].p * taux * taux;
 
-//std::cout<<"prob p "<<particles[i].p<<"factor"<<factor<<std::endl;
-		particles[i].p = particles[i].p / factor;
 	}
 
 
@@ -326,13 +324,14 @@ void MCL::normalize() {
 	//std::cerr<<"N<";
 
 	float sum = 0.0;
-	
+	float factor;
+
 	for (int i = 0; i < NUMPARTICLES; i++){
 		sum = sum + particles[i].p;
 //std::cout<<"prob p "<<particles[i].p<<"sum : "<<sum<<std::endl;
 }
 std::cout<<"prob total: "<<sum/(float)NUMPARTICLES<<std::endl;
-if (sum/(float)NUMPARTICLES != 0.0025)
+if (sum/(float)NUMPARTICLES > 1.5)
 	pose.pose.position.z = 0.0;
 else
 	pose.pose.position.z = 1.0;
@@ -343,15 +342,11 @@ else
 		particles[i].p = particles[i].p * factor;
 
 //std::cout<<"prob "<<particles[i].p<<"pos x: "<<particles[i].coord.position.x<<" y: "<<particles[i].coord.position.y<<std::endl;
-//std::cout<<"prob sum "<<sum<<"factor"<<factor<<std::endl;
+//std::cout<<"prob sum "<<particles[i].p<<"factor"<<factor<<std::endl;
 }
 
 /*std::cout<<"Real pose update: "<<pose.pose.position.x<<", "<<
 				pose.pose.position.y<<")"<<std::endl;*/
-/*if (sum/NUMPARTICLES < 0.7)
-{
-	resetParticles();
-}*/
 	//std::cerr<<">"<<std::endl;;
 }
 
@@ -412,20 +407,9 @@ void MCL::correct() {
 
 	}
 
-	/*float sum = 0.0;
-	
-	for (int i = 0; i < NUMPARTICLES; i++)
-		sum = sum + particles[i].p;
-std::cout<<"prob total sumaaaa: "<<sum/(float)NUMPARTICLES<<std::endl;
-	if (sum/(float)NUMPARTICLES < 0.005)
-		resetParticles();*/
-
 	normalize();
 	updatePos();
-	if(pose.pose.position.z != 0.0)
-		resetParticles();
-	//else
-		//reseed();
+	reseed();
 }
 
 void MCL::updateObservation2(std::string obs, std::string real) {
@@ -505,8 +489,8 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 
 		x = L2H.getOrigin().x() * cos(-yaw) - L2H.getOrigin().y() * sin(-yaw); //Porque es la vista desde la baliza al robot
 		y = L2H.getOrigin().x() * sin(-yaw) + L2H.getOrigin().y() * cos(-yaw);
-		//x = L2H.getOrigin().x();
-		//y = L2H.getOrigin().y();
+		//x2 = L2H.getOrigin().x();
+		//y2 = L2H.getOrigin().y();
 //std::cerr<<"x = ("<<x<<") y: ("<<y<<std::endl;
 		float angle2ideal = normalizePi(atan2(y, x) + M_PI);
 		float dista2ideal = sqrt(x * x + y * y);
@@ -517,16 +501,17 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		float probdist = getProbPos(dista2ideal, dista2obs, desvDist);
 		float probrota = getProbRot(angle2ideal, angle2obs, desvAngl);
 //std::cerr<<"Probdist = ("<<probdist<<") probrota: ("<<probrota<<")"<<std::endl;
-		particles[i].p = particles[i].p * probdist * probrota ;
+		if(particles[i].p != 2.0)
+			particles[i].p = particles[i].p * probdist * probrota;
+		else
+			particles[i].p = probdist * probrota;
 //std::cout<<i<<": probdist "<<probdist<<" probrota "<<probrota<<" ptotal: "<<particles[i].p<<std::endl;
 		if (particles[i].p < 0.0000001)
 			particles[i].p = 0.0000001;
-		if (particles[i].p > 1000000000.0)
-			particles[i].p = 1000000000.0;
 	}
 }
 
-/*void MCL::reseed() {
+void MCL::reseed() {
 
 	float sx2, sy2, st2;
 
@@ -565,7 +550,7 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		particles[i].coord.position.x = x;
 		particles[i].coord.position.y = y;
 		particles[i].coord.position.z = 0;
-		//particles[i].p = 0.0000001;
+		particles[i].p = 2.0;
 
 		float newt = normalizePi(yaw + normalizePi((double) normalT(generator)));
 		//sdt::cerr<<"\tyaw: "<<yaw<<", "<<newt<<std::endl;
@@ -596,7 +581,7 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		particles[i].coord.position.x = x;
 		particles[i].coord.position.y = y;
 		particles[i].coord.position.z = 0;
-		//particles[i].p = 0.0000001;
+		particles[i].p = 2.0;
 
 		float t = normalizePi(((float) rand() / (float) RAND_MAX) * 2.0 * M_PI);
 
@@ -609,7 +594,7 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		particles[i].coord.orientation.w = q.w();
 	}
 
-}*/
+}
 
 float MCL::getProbPos(float ideal, float obs, float desv) {
 	float dist;
