@@ -332,7 +332,7 @@ void MCL::normalize() {
 //std::cout<<"prob p "<<particles[i].p<<"sum : "<<sum<<std::endl;
 }
 std::cout<<"prob total: "<<sum/(float)NUMPARTICLES<<std::endl;
-if (sum/(float)NUMPARTICLES > 0.005)
+if (sum/(float)NUMPARTICLES != 0.0025)
 	pose.pose.position.z = 0.0;
 else
 	pose.pose.position.z = 1.0;
@@ -422,9 +422,9 @@ std::cout<<"prob total sumaaaa: "<<sum/(float)NUMPARTICLES<<std::endl;
 
 	normalize();
 	updatePos();
-	/*if(pose.pose.position.z != 0.0)
+	if(pose.pose.position.z != 0.0)
 		resetParticles();
-	else*/
+	//else
 		//reseed();
 }
 
