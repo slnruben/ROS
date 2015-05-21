@@ -501,7 +501,7 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		float probdist = getProbPos(dista2ideal, dista2obs, desvDist);
 		float probrota = getProbRot(angle2ideal, angle2obs, desvAngl);
 //std::cerr<<"Probdist = ("<<probdist<<") probrota: ("<<probrota<<")"<<std::endl;
-		if(particles[i].p != 2.0)
+		if(particles[i].p != -2.0)
 			particles[i].p = particles[i].p * probdist * probrota;
 		else
 			particles[i].p = probdist * probrota;
@@ -550,7 +550,7 @@ void MCL::reseed() {
 		particles[i].coord.position.x = x;
 		particles[i].coord.position.y = y;
 		particles[i].coord.position.z = 0;
-		particles[i].p = 2.0;
+		particles[i].p = -2.0;
 
 		float newt = normalizePi(yaw + normalizePi((double) normalT(generator)));
 		//sdt::cerr<<"\tyaw: "<<yaw<<", "<<newt<<std::endl;
@@ -581,7 +581,7 @@ void MCL::reseed() {
 		particles[i].coord.position.x = x;
 		particles[i].coord.position.y = y;
 		particles[i].coord.position.z = 0;
-		particles[i].p = 2.0;
+		particles[i].p = -2.0;
 
 		float t = normalizePi(((float) rand() / (float) RAND_MAX) * 2.0 * M_PI);
 
