@@ -420,13 +420,13 @@ go2pos(Object o)
 	float v,w;
 	float a=o.cy;
 	if(o.cy >0.7){
-		w=-0.3;
+		w=0.4;
 	}else if(o.cy >0.1){
-		w=-0.1*a;
-	}else if(o.cy <0.1){
-		w=0.1*a;
-	}else if(o.cy <1){
 		w=0.3;
+	}else if(o.cy <-0.1){
+		w=-0.3;
+	}else if(o.cy <-0.7){
+		w=-0.4;
 	}else{
 		w=0.0;
 	}
@@ -715,8 +715,12 @@ k++;
 				std::cout<<"y:"<<target.o.cy<<std::endl;
 
 				if(target.o.cx< 0.68){
-			 	std::cout<<"GIRYDIST4567845674857564747574939485756483934"<<std::endl;
-					target.found=true;
+			 		target.found=true;
+					for (int i = 0; i < num_objects; ++i){ 
+						if(array[i].o.name.compare(target.o.name)==0){
+							array[i].found=true;
+						}	
+					}
 					peep();
 					state= girydist;
 					break;
