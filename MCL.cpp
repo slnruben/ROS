@@ -331,7 +331,7 @@ void MCL::normalize() {
 //std::cout<<"prob p "<<particles[i].p<<"sum : "<<sum<<std::endl;
 }
 std::cout<<"prob total: "<<sum/(float)NUMPARTICLES<<std::endl;
-if (sum/(float)NUMPARTICLES > 1.5)
+if (sum/(float)NUMPARTICLES > 0.015)
 	pose.pose.position.z = 0.0;
 else
 	pose.pose.position.z = 1.0;
@@ -501,10 +501,8 @@ void MCL::updateObservation2(std::string obs, std::string real) {
 		float probdist = getProbPos(dista2ideal, dista2obs, desvDist);
 		float probrota = getProbRot(angle2ideal, angle2obs, desvAngl);
 //std::cerr<<"Probdist = ("<<probdist<<") probrota: ("<<probrota<<")"<<std::endl;
-		if(particles[i].p != -2.0)
-			particles[i].p = particles[i].p * probdist * probrota;
-		else
-			particles[i].p = probdist * probrota;
+		
+		particles[i].p = particles[i].p * probdist * probrota;
 //std::cout<<i<<": probdist "<<probdist<<" probrota "<<probrota<<" ptotal: "<<particles[i].p<<std::endl;
 		if (particles[i].p < 0.0000001)
 			particles[i].p = 0.0000001;
@@ -550,7 +548,7 @@ void MCL::reseed() {
 		particles[i].coord.position.x = x;
 		particles[i].coord.position.y = y;
 		particles[i].coord.position.z = 0;
-		particles[i].p = -2.0;
+		particles[i].p = 1.0 / ((float) NUMPARTICLES);
 
 		float newt = normalizePi(yaw + normalizePi((double) normalT(generator)));
 		//sdt::cerr<<"\tyaw: "<<yaw<<", "<<newt<<std::endl;
@@ -581,7 +579,7 @@ void MCL::reseed() {
 		particles[i].coord.position.x = x;
 		particles[i].coord.position.y = y;
 		particles[i].coord.position.z = 0;
-		particles[i].p = -2.0;
+		particles[i].p = 1.0 / ((float) NUMPARTICLES);
 
 		float t = normalizePi(((float) rand() / (float) RAND_MAX) * 2.0 * M_PI);
 
